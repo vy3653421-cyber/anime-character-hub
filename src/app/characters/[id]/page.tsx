@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Heart, LoaderCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type CharacterProfile = {
@@ -173,28 +173,42 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {character.anime.slice(0, 6).map((entry) => (
-                  <a
-                    key={`anime-${entry.mal_id}`}
-                    href={entry.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-                  >
-                    <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
-                    <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
-                  </a>
+                  entry.url ? (
+                    <a
+                      key={`anime-${entry.mal_id}`}
+                      href={entry.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                    >
+                      <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
+                    </a>
+                  ) : (
+                    <div key={`anime-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4">
+                      <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p>
+                    </div>
+                  )
                 ))}
                 {character.manga.slice(0, 6).map((entry) => (
-                  <a
-                    key={`manga-${entry.mal_id}`}
-                    href={entry.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-                  >
-                    <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
-                    <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
-                  </a>
+                  entry.url ? (
+                    <a
+                      key={`manga-${entry.mal_id}`}
+                      href={entry.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                    >
+                      <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
+                    </a>
+                  ) : (
+                    <div key={`manga-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4">
+                      <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p>
+                    </div>
+                  )
                 ))}
               </div>
             </section>
