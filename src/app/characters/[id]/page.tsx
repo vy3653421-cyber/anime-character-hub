@@ -16,6 +16,8 @@ type CharacterProfile = {
   manga: Array<{ mal_id: number; title: string; url?: string }>;
 };
 
+const FAVORITES_KEY = "anime-character-hub:favorites";
+
 export default function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,16 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         const { id } = await params;
         const response = await fetch(`/api/characters/${id}`);
         if (!response.ok) throw new Error("Profile request failed");
-        setCharacter((await response.json()) as CharacterProfile);
+        const profile = (await response.json()) as CharacterProfile;
+        setCharacter(profile);
+
+        try {
+          const stored = window.localStorage.getItem(FAVORITES_KEY);
+          const ids = stored ? (JSON.parse(stored) as number[]) : [];
+          setSaved(ids.includes(profile.id));
+        } catch {
+          // Ignore unavailable or malformed local storage.
+        }
       } catch {
         setError(true);
       } finally {
@@ -38,6 +49,17 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
 
     void load();
   }, [params]);
+
+  const toggleSaved = () => {
+    if (!character) return;
+    setSaved((current) => {
+      const stored = window.localStorage.getItem(FAVORITES_KEY);
+      const ids = stored ? (JSON.parse(stored) as number[]) : [];
+      const next = current ? ids.filter((id) => id !== character.id) : [...new Set([...ids, character.id])];
+      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      return !current;
+    });
+  };
 
   if (loading) {
     return (
@@ -76,9 +98,9 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
           <Sparkles size={14} /> ANIME<span className="text-white/30">//</span>HUB
         </div>
         <button
-          onClick={() => setSaved((value) => !value)}
+          onClick={toggleSaved}
           className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10"
-          aria-label="Save character"
+          aria-label={saved ? "Remove character from saved" : "Save character"}
         >
           <Heart size={16} fill={saved ? "currentColor" : "none"} />
         </button>
