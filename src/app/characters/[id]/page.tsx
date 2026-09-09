@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Heart, Sparkles } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Reveal } from "../../components/Reveal";
 
@@ -26,6 +26,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const load = async () => {
@@ -74,9 +75,9 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
     return (
       <main className="grid min-h-screen place-items-center bg-[#07070b] px-6 text-white">
         <div className="w-full max-w-md">
-          <div className="aspect-[4/5] animate-pulse rounded-[2rem] border border-white/8 bg-white/[.035]" />
-          <div className="mt-6 h-4 w-32 animate-pulse rounded bg-white/10" />
-          <div className="mt-4 h-16 w-4/5 animate-pulse rounded bg-white/10" />
+          <div className="motion-safe:animate-pulse aspect-[4/5] rounded-[2rem] border border-white/8 bg-white/[.035]" />
+          <div className="motion-safe:animate-pulse mt-6 h-4 w-32 rounded bg-white/10" />
+          <div className="motion-safe:animate-pulse mt-4 h-16 w-4/5 rounded bg-white/10" />
         </div>
       </main>
     );
@@ -122,10 +123,10 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
       <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1500px] items-center gap-10 px-6 py-12 md:px-12 lg:grid-cols-[minmax(320px,520px)_1fr] lg:gap-20 lg:py-16">
         <Reveal>
           <motion.div
-            initial={{ opacity: 0, y: 28, scale: 0.97 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30 transition duration-700 hover:border-white/15"
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30 transition duration-700 hover:border-white/15 motion-reduce:transition-none"
           >
             <div className="relative aspect-[4/5]">
               {character.image ? (
@@ -135,13 +136,13 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
                   fill
                   priority
                   sizes="(max-width: 1024px) min(100vw - 3rem, 520px), 520px"
-                  className="object-cover transition duration-1000 hover:scale-[1.02]"
+                  className="object-cover transition duration-1000 hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
                 />
               ) : (
                 <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.35),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#07070b] via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,.08)_48%,transparent_65%)] opacity-0 transition-opacity duration-700 hover:opacity-100" />
+              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,.08)_48%,transparent_65%)] opacity-0 transition-opacity duration-700 hover:opacity-100 motion-reduce:transition-none motion-reduce:hover:opacity-0" />
             </div>
             <div className="absolute bottom-0 left-0 right-0 p-6">
               <p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Character archive</p>
@@ -202,7 +203,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
                         href={entry.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                       >
                         <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
                         <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
@@ -221,7 +222,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
                         href={entry.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                       >
                         <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
                         <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
@@ -241,11 +242,11 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
           <Reveal>
             <div className="mt-8 flex flex-wrap gap-3">
               {character.url && (
-                <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+                <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:scale-100">
                   Open source profile <ExternalLink size={13} />
                 </a>
               )}
-              <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">
+              <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none">
                 Explore more characters
               </Link>
             </div>
