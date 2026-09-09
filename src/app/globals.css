@@ -5,3 +5,36 @@ html { scroll-behavior: smooth; }
 body { margin: 0; background: #07070b; }
 * { box-sizing: border-box; }
 ::selection { background: rgba(167,139,250,.35); color: white; }
+
+@keyframes cinematic-drift-one {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(3%, -2%, 0) scale(1.04); }
+}
+
+@keyframes cinematic-drift-two {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-3%, 2%, 0) scale(1.06); }
+}
+
+.cinematic-orb {
+  z-index: 0;
+  opacity: .32;
+  filter: blur(70px);
+  will-change: transform;
+}
+
+.cinematic-orb-one {
+  background: radial-gradient(circle at 78% 20%, rgba(139, 92, 246, .16), transparent 25%);
+  animation: cinematic-drift-one 14s ease-in-out infinite;
+}
+
+.cinematic-orb-two {
+  background: radial-gradient(circle at 12% 78%, rgba(14, 165, 233, .1), transparent 23%);
+  animation: cinematic-drift-two 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cinematic-orb-one,
+  .cinematic-orb-two { animation: none; }
+}
