@@ -23,6 +23,13 @@ const fallbackCharacters: Character[] = [
 ];
 
 const FAVORITES_KEY = "anime-character-hub:favorites";
+const PAGE_SIZE = 24;
+
+type CatalogResponse = {
+  characters?: Character[];
+  page?: number;
+  hasNextPage?: boolean;
+};
 
 export default function Home() {
   const router = useRouter();
@@ -34,6 +41,9 @@ export default function Home() {
   const [favoritesHydrated, setFavoritesHydrated] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -63,10 +73,12 @@ export default function Home() {
   useEffect(() => {
     const loadCharacters = async () => {
       try {
-        const response = await fetch("/api/characters");
+        const response = await fetch(`/api/characters?page=1`);
         if (!response.ok) throw new Error("Catalog request failed");
-        const data = (await response.json()) as { characters?: Character[] };
+        const data = (await response.json()) as CatalogResponse;
         if (data.characters?.length) setCharacters(data.characters);
+        setCatalogPage(data.page ?? 1);
+        setHasNextPage(Boolean(data.hasNextPage));
       } catch {
         setCatalogError(true);
       } finally {
@@ -102,6 +114,28 @@ export default function Home() {
     router.push(`/characters/${next.id}`);
   };
 
+  const loadMore = async () => {
+    if (loadingMore || !hasNextPage) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = catalogPage + 1;
+      const response = await fetch(`/api/characters?page=${nextPage}`);
+      if (!response.ok) throw new Error("Next catalog page failed");
+      const data = (await response.json()) as CatalogResponse;
+      const nextCharacters = data.characters ?? [];
+      setCharacters((current) => {
+        const existing = new Set(current.map((character) => character.id));
+        return [...current, ...nextCharacters.filter((character) => !existing.has(character.id))];
+      });
+      setCatalogPage(data.page ?? nextPage);
+      setHasNextPage(Boolean(data.hasNextPage));
+    } catch {
+      setCatalogError(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#07070b] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(116,87,255,.18),transparent_32%),radial-gradient(circle_at_15%_80%,rgba(28,101,173,.10),transparent_28%)]" />
@@ -129,7 +163,7 @@ export default function Home() {
             <a href="#discover" className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">Explore archive <span className="transition group-hover:translate-x-1">→</span></a>
             <button onClick={randomCharacter} className="flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-5 py-3 text-xs font-semibold text-white/75 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"><Shuffle size={14} /> Random character</button>
           </div>
-          <div className="mt-10 flex gap-8 text-[10px] uppercase tracking-[.18em] text-white/35"><span><b className="mr-2 text-white/80">{characters.length || "∞"}</b>Loaded</span><span><b className="mr-2 text-white/80">{favorites.length}</b>Saved</span><span><b className="mr-2 text-white/80">24</b>Per feed</span></div>
+          <div className="mt-10 flex gap-8 text-[10px] uppercase tracking-[.18em] text-white/35"><span><b className="mr-2 text-white/80">{characters.length || "∞"}</b>Loaded</span><span><b className="mr-2 text-white/80">{favorites.length}</b>Saved</span><span><b className="mr-2 text-white/80">{PAGE_SIZE}</b>Per feed</span></div>
         </div>
         <div className="absolute bottom-8 right-8 hidden w-[45%] max-w-[620px] lg:block">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl shadow-violet-950/30">
@@ -147,7 +181,7 @@ export default function Home() {
             <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} sort={sort} onSortChange={setSort} savedCount={favorites.length} />
           </div>
 
-          {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its fallback entries.</div>}
+          {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its available entries.</div>}
           {catalogLoading && <div className="mb-6 text-xs uppercase tracking-[.2em] text-white/30">Loading character archive…</div>}
 
           <div id="popular" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -159,6 +193,19 @@ export default function Home() {
           </div>
 
           {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">{filter === "saved" ? "No saved characters" : "No character found"}</p><p className="mt-2 text-xs text-white/35">{filter === "saved" ? "Save characters with the star button to build your collection." : "Try another name or clear the search."}</p></div>}
+
+          {filter === "all" && !query.trim() && hasNextPage && (
+            <div className="mt-10 flex justify-center">
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="rounded-full border border-white/10 bg-white/[.045] px-6 py-3 text-xs font-semibold text-white/75 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+              >
+                {loadingMore ? "Loading more characters…" : `Load ${PAGE_SIZE} more characters`}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
