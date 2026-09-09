@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Heart, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -115,10 +116,17 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
       </header>
 
       <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1500px] items-center gap-10 px-6 py-12 md:px-12 lg:grid-cols-[minmax(320px,520px)_1fr] lg:gap-20 lg:py-16">
-        <div className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30">
-          <div className="aspect-[4/5]">
+        <div className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30 transition duration-700 hover:border-white/15">
+          <div className="relative aspect-[4/5]">
             {character.image ? (
-              <img src={character.image} alt={character.name} className="h-full w-full object-cover" />
+              <Image
+                src={character.image}
+                alt={character.name}
+                fill
+                priority
+                sizes="(max-width: 1024px) min(100vw - 3rem, 520px), 520px"
+                className="object-cover transition duration-1000 hover:scale-[1.02]"
+              />
             ) : (
               <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.35),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />
             )}
