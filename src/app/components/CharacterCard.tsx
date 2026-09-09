@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 
@@ -23,13 +24,15 @@ export function CharacterCard({ character, rank, saved, onToggleSaved }: Props) 
         aria-label={`View ${character.name} profile`}
         className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-inset"
       />
-      <div className="aspect-[4/5] overflow-hidden">
+      <div className="relative aspect-[4/5] overflow-hidden">
         {character.image ? (
-          <img
+          <Image
             src={character.image}
             alt={character.name}
-            loading={rank > 4 ? "lazy" : "eager"}
-            className="h-full w-full object-cover opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-95"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            priority={rank <= 4}
+            className="object-cover opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-95"
           />
         ) : (
           <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.32),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />
