@@ -71,34 +71,40 @@ export default function Home() {
   }, [favorites, favoritesHydrated]);
 
   useEffect(() => {
-    const loadCharacters = async () => {
-      try {
-        const response = await fetch(`/api/characters?page=1`);
-        if (!response.ok) throw new Error("Catalog request failed");
-        const data = (await response.json()) as CatalogResponse;
-        if (data.characters?.length) setCharacters(data.characters);
-        setCatalogPage(data.page ?? 1);
-        setHasNextPage(Boolean(data.hasNextPage));
-      } catch {
-        setCatalogError(true);
-      } finally {
-        setCatalogLoading(false);
-      }
-    };
+    const timer = window.setTimeout(() => {
+      const loadCharacters = async () => {
+        setCatalogLoading(true);
+        setCatalogError(false);
+        try {
+          const search = query.trim();
+          const endpoint = search
+            ? `/api/characters?q=${encodeURIComponent(search)}&page=1`
+            : "/api/characters?page=1";
+          const response = await fetch(endpoint);
+          if (!response.ok) throw new Error("Catalog request failed");
+          const data = (await response.json()) as CatalogResponse;
+          if (data.characters?.length) setCharacters(data.characters);
+          else if (search) setCharacters([]);
+          setCatalogPage(data.page ?? 1);
+          setHasNextPage(Boolean(data.hasNextPage));
+        } catch {
+          setCatalogError(true);
+        } finally {
+          setCatalogLoading(false);
+        }
+      };
 
-    void loadCharacters();
-  }, []);
+      void loadCharacters();
+    }, query.trim() ? 300 : 0);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   const filteredCharacters = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
     return characters
-      .filter((character) => {
-        const matchesQuery = !normalized || character.name.toLowerCase().includes(normalized);
-        const matchesFilter = filter === "all" || favorites.includes(character.id);
-        return matchesQuery && matchesFilter;
-      })
+      .filter((character) => filter === "all" || favorites.includes(character.id))
       .sort((a, b) => (sort === "popular" ? b.favorites - a.favorites : a.name.localeCompare(b.name)));
-  }, [characters, favorites, filter, query, sort]);
+  }, [characters, favorites, filter, sort]);
 
   const featured = characters[0];
 
@@ -119,7 +125,11 @@ export default function Home() {
     setLoadingMore(true);
     try {
       const nextPage = catalogPage + 1;
-      const response = await fetch(`/api/characters?page=${nextPage}`);
+      const search = query.trim();
+      const endpoint = search
+        ? `/api/characters?q=${encodeURIComponent(search)}&page=${nextPage}`
+        : `/api/characters?page=${nextPage}`;
+      const response = await fetch(endpoint);
       if (!response.ok) throw new Error("Next catalog page failed");
       const data = (await response.json()) as CatalogResponse;
       const nextCharacters = data.characters ?? [];
@@ -194,7 +204,7 @@ export default function Home() {
 
           {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">{filter === "saved" ? "No saved characters" : "No character found"}</p><p className="mt-2 text-xs text-white/35">{filter === "saved" ? "Save characters with the star button to build your collection." : "Try another name or clear the search."}</p></div>}
 
-          {filter === "all" && !query.trim() && hasNextPage && (
+          {filter === "all" && hasNextPage && (
             <div className="mt-10 flex justify-center">
               <button
                 type="button"
