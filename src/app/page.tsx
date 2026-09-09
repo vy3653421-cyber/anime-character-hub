@@ -71,6 +71,22 @@ export default function Home() {
   }, [favorites, favoritesHydrated]);
 
   useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document.getElementById("search")?.focus();
+      }
+      if (event.key === "Escape" && document.activeElement?.id === "search") {
+        setQuery("");
+        (document.activeElement as HTMLElement).blur();
+      }
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       const loadCharacters = async () => {
         setCatalogLoading(true);
@@ -192,7 +208,12 @@ export default function Home() {
           </div>
 
           {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its available entries.</div>}
-          {catalogLoading && <div className="mb-6 text-xs uppercase tracking-[.2em] text-white/30">Loading character archive…</div>}
+          {catalogLoading && <div className="mb-6 text-xs uppercase tracking-[.2em] text-white/30" aria-live="polite">Loading character archive…</div>}
+
+          <div className="mb-5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-white/25" aria-live="polite">
+            <span>{filteredCharacters.length} {filteredCharacters.length === 1 ? "character" : "characters"} visible</span>
+            {query && !catalogLoading ? <span>Search results · page {catalogPage}</span> : <span>Page {catalogPage}</span>}
+          </div>
 
           <div id="popular" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {filteredCharacters.map((character, index) => (
@@ -206,12 +227,7 @@ export default function Home() {
 
           {filter === "all" && hasNextPage && (
             <div className="mt-10 flex justify-center">
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="rounded-full border border-white/10 bg-white/[.045] px-6 py-3 text-xs font-semibold text-white/75 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-              >
+              <button type="button" onClick={loadMore} disabled={loadingMore} className="rounded-full border border-white/10 bg-white/[.045] px-6 py-3 text-xs font-semibold text-white/75 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">
                 {loadingMore ? "Loading more characters…" : `Load ${PAGE_SIZE} more characters`}
               </button>
             </div>
