@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Search, Shuffle, Sparkles, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ArchiveControls } from "./components/ArchiveControls";
 
 type Character = {
   id: number;
@@ -24,6 +25,7 @@ const FAVORITES_KEY = "anime-character-hub:favorites";
 export default function Home() {
   const [characters, setCharacters] = useState<Character[]>(fallbackCharacters);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "saved">("all");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
@@ -64,9 +66,12 @@ export default function Home() {
 
   const filteredCharacters = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return characters;
-    return characters.filter((character) => character.name.toLowerCase().includes(normalized));
-  }, [characters, query]);
+    return characters.filter((character) => {
+      const matchesQuery = !normalized || character.name.toLowerCase().includes(normalized);
+      const matchesFilter = filter === "all" || favorites.includes(character.id);
+      return matchesQuery && matchesFilter;
+    });
+  }, [characters, favorites, filter, query]);
 
   const featured = characters[0];
 
@@ -80,6 +85,7 @@ export default function Home() {
     if (!characters.length) return;
     const next = characters[Math.floor(Math.random() * characters.length)];
     setQuery(next.name);
+    setFilter("all");
     document.getElementById("discover")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -125,11 +131,7 @@ export default function Home() {
         <div className="mx-auto max-w-[1500px]">
           <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">The archive</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Discover characters</h2></div>
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35" size={16} />
-              <input id="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search characters…" className="w-full rounded-full border border-white/10 bg-white/[.045] py-3 pl-11 pr-10 text-sm outline-none transition placeholder:text-white/30 focus:border-violet-300/50 focus:bg-white/[.07]" />
-              {query && <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/40 hover:text-white" aria-label="Clear search"><X size={15} /></button>}
-            </div>
+            <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} savedCount={favorites.length} />
           </div>
 
           {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its fallback entries.</div>}
@@ -149,7 +151,7 @@ export default function Home() {
             ))}
           </div>
 
-          {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">No character found</p><p className="mt-2 text-xs text-white/35">Try another name or clear the search.</p></div>}
+          {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">{filter === "saved" ? "No saved characters" : "No character found"}</p><p className="mt-2 text-xs text-white/35">{filter === "saved" ? "Save characters with the star button to build your collection." : "Try another name or clear the search."}</p></div>}
         </div>
       </section>
 
