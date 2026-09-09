@@ -53,19 +53,27 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
   const toggleSaved = () => {
     if (!character) return;
     setSaved((current) => {
-      const stored = window.localStorage.getItem(FAVORITES_KEY);
-      const ids = stored ? (JSON.parse(stored) as number[]) : [];
-      const next = current ? ids.filter((id) => id !== character.id) : [...new Set([...ids, character.id])];
-      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      try {
+        const stored = window.localStorage.getItem(FAVORITES_KEY);
+        const ids = stored ? (JSON.parse(stored) as number[]) : [];
+        const next = current
+          ? ids.filter((id) => id !== character.id)
+          : [...new Set([...ids, character.id])];
+        window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      } catch {
+        // Keep the current UI state if browser storage is unavailable.
+      }
       return !current;
     });
   };
 
   if (loading) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#07070b] text-white">
-        <div className="flex items-center gap-3 text-xs uppercase tracking-[.22em] text-white/40">
-          <LoaderCircle className="animate-spin" size={16} /> Loading profile
+      <main className="grid min-h-screen place-items-center bg-[#07070b] px-6 text-white">
+        <div className="w-full max-w-md">
+          <div className="aspect-[4/5] animate-pulse rounded-[2rem] border border-white/8 bg-white/[.035]" />
+          <div className="mt-6 h-4 w-32 animate-pulse rounded bg-white/10" />
+          <div className="mt-4 h-16 w-4/5 animate-pulse rounded bg-white/10" />
         </div>
       </main>
     );
@@ -77,7 +85,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         <div>
           <p className="text-xs uppercase tracking-[.22em] text-violet-300">Profile unavailable</p>
           <h1 className="mt-3 text-3xl font-bold">Character not found</h1>
-          <Link href="/" className="mt-7 inline-flex rounded-full bg-white px-5 py-3 text-xs font-bold text-black">
+          <Link href="/" className="mt-7 inline-flex rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
             Return to archive
           </Link>
         </div>
@@ -90,7 +98,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(116,87,255,.2),transparent_34%),radial-gradient(circle_at_10%_85%,rgba(28,101,173,.12),transparent_30%)]" />
 
       <header className="relative z-10 flex h-20 items-center justify-between border-b border-white/8 px-6 md:px-12">
-        <Link href="/" className="flex items-center gap-3 text-white/65 transition hover:text-white">
+        <Link href="/" className="flex items-center gap-3 text-white/65 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">
           <ArrowLeft size={17} />
           <span className="text-xs font-semibold uppercase tracking-[.2em]">Back to archive</span>
         </Link>
@@ -99,7 +107,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         </div>
         <button
           onClick={toggleSaved}
-          className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10"
+          className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
           aria-label={saved ? "Remove character from saved" : "Save character"}
         >
           <Heart size={16} fill={saved ? "currentColor" : "none"} />
@@ -153,13 +161,52 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
+          {(character.anime.length > 0 || character.manga.length > 0) && (
+            <section className="mt-12 border-t border-white/8 pt-8" aria-labelledby="appearances-heading">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Connected worlds</p>
+                  <h2 id="appearances-heading" className="mt-2 text-2xl font-bold tracking-tight">Appearances</h2>
+                </div>
+                <span className="text-[10px] uppercase tracking-[.18em] text-white/25">Top entries</span>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {character.anime.slice(0, 6).map((entry) => (
+                  <a
+                    key={`anime-${entry.mal_id}`}
+                    href={entry.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                  >
+                    <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
+                    <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
+                  </a>
+                ))}
+                {character.manga.slice(0, 6).map((entry) => (
+                  <a
+                    key={`manga-${entry.mal_id}`}
+                    href={entry.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
+                  >
+                    <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
+                    <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
           <div className="mt-8 flex flex-wrap gap-3">
             {character.url && (
-              <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03]">
+              <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
                 Open source profile <ExternalLink size={13} />
               </a>
             )}
-            <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10">
+            <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">
               Explore more characters
             </Link>
           </div>
