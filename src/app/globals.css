@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+:root { color-scheme: dark; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #07070b; }
+* { box-sizing: border-box; }
+::selection { background: rgba(167,139,250,.35); color: white; }
