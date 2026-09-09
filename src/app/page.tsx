@@ -37,7 +37,7 @@ function ArchiveSkeleton() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
       {Array.from({ length: 8 }).map((_, index) => (
         <div key={index} className="overflow-hidden rounded-3xl border border-white/8 bg-white/[.035]">
-          <div className="relative aspect-[4/5] animate-pulse bg-white/[.045]">
+          <div className="relative aspect-[4/5] motion-safe:animate-pulse bg-white/[.045]">
             <div className="absolute inset-x-5 bottom-5 h-3 w-2/5 rounded-full bg-white/[.08]" />
             <div className="absolute inset-x-5 bottom-11 h-5 w-3/4 rounded-full bg-white/[.08]" />
           </div>
@@ -55,6 +55,7 @@ export default function Home() {
   const [sort, setSort] = useState<"popular" | "name">("popular");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [favoritesHydrated, setFavoritesHydrated] = useState(false);
+  const [viewHydrated, setViewHydrated] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
   const [catalogPage, setCatalogPage] = useState(1);
@@ -73,19 +74,39 @@ export default function Home() {
         setFavoritesHydrated(true);
       }
     }, 0);
-
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!favoritesHydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlQuery = params.get("q") ?? "";
+    const urlFilter = params.get("filter");
+    const urlSort = params.get("sort");
+    if (urlQuery) setQuery(urlQuery);
+    if (urlFilter === "saved") setFilter("saved");
+    if (urlSort === "name") setSort("name");
+    setViewHydrated(true);
+  }, []);
 
+  useEffect(() => {
+    if (!favoritesHydrated) return;
     try {
       window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     } catch {
       // Favorites remain available for the current session.
     }
   }, [favorites, favoritesHydrated]);
+
+  useEffect(() => {
+    if (!viewHydrated) return;
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (filter === "saved") params.set("filter", "saved");
+    if (sort === "name") params.set("sort", "name");
+    const next = params.toString();
+    const url = next ? `/?${next}` : "/";
+    window.history.replaceState(window.history.state, "", url);
+  }, [query, filter, sort, viewHydrated]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -98,12 +119,12 @@ export default function Home() {
         (document.activeElement as HTMLElement).blur();
       }
     };
-
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
 
   useEffect(() => {
+    if (!viewHydrated) return;
     const timer = window.setTimeout(() => {
       const loadCharacters = async () => {
         setCatalogLoading(true);
@@ -126,12 +147,10 @@ export default function Home() {
           setCatalogLoading(false);
         }
       };
-
       void loadCharacters();
     }, query.trim() ? 300 : 0);
-
     return () => window.clearTimeout(timer);
-  }, [query, retryToken]);
+  }, [query, retryToken, viewHydrated]);
 
   const filteredCharacters = useMemo(() => {
     return characters
@@ -142,9 +161,7 @@ export default function Home() {
   const featured = characters[0];
 
   const toggleFavorite = (id: number) => {
-    setFavorites((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+    setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   };
 
   const resetArchive = () => {
