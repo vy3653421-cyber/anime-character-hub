@@ -18,12 +18,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawPage = Number(searchParams.get("page") ?? "1");
   const page = Number.isInteger(rawPage) && rawPage >= 1 ? Math.min(rawPage, MAX_PAGE) : 1;
+  const query = searchParams.get("q")?.trim() ?? "";
+  const endpoint = query
+    ? `https://api.jikan.moe/v4/characters?q=${encodeURIComponent(query)}&limit=${PAGE_SIZE}&page=${page}`
+    : `https://api.jikan.moe/v4/top/characters?limit=${PAGE_SIZE}&page=${page}`;
 
   try {
-    const response = await fetch(
-      `https://api.jikan.moe/v4/top/characters?limit=${PAGE_SIZE}&page=${page}`,
-      { next: { revalidate: 3600 } },
-    );
+    const response = await fetch(endpoint, { next: { revalidate: 3600 } });
 
     if (!response.ok) {
       return NextResponse.json(
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
       {
         characters,
         page,
+        query,
         hasNextPage: Boolean(payload.pagination?.has_next_page) && page < MAX_PAGE,
       },
       { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } },
