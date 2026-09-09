@@ -19,11 +19,15 @@ type CharacterProfile = {
   manga: Array<{ mal_id: number; title: string; url?: string }>;
 };
 
+type GalleryResponse = { pictures?: Array<{ image: string }> };
+
 const FAVORITES_KEY = "anime-character-hub:favorites";
 
 export default function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [galleryLoading, setGalleryLoading] = useState(true);
   const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -44,8 +48,21 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         } catch {
           // Ignore unavailable or malformed local storage.
         }
+
+        try {
+          const galleryResponse = await fetch(`/api/characters/${id}/pictures`);
+          if (galleryResponse.ok) {
+            const data = (await galleryResponse.json()) as GalleryResponse;
+            setGallery((data.pictures ?? []).map((picture) => picture.image).slice(0, 12));
+          }
+        } catch {
+          // Gallery is optional; the profile remains usable if it cannot load.
+        } finally {
+          setGalleryLoading(false);
+        }
       } catch {
         setError(true);
+        setGalleryLoading(false);
       } finally {
         setLoading(false);
       }
@@ -111,144 +128,58 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         <div className="hidden items-center gap-2 text-xs font-semibold tracking-[.2em] md:flex">
           <Sparkles size={14} /> ANIME<span className="text-white/30">/</span>HUB
         </div>
-        <button
-          onClick={toggleSaved}
-          className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"
-          aria-label={saved ? "Remove character from saved" : "Save character"}
-        >
+        <button onClick={toggleSaved} className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70" aria-label={saved ? "Remove character from saved" : "Save character"}>
           <Heart size={16} fill={saved ? "currentColor" : "none"} />
         </button>
       </header>
 
       <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1500px] items-center gap-10 px-6 py-12 md:px-12 lg:grid-cols-[minmax(320px,520px)_1fr] lg:gap-20 lg:py-16">
         <Reveal>
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30 transition duration-700 hover:border-white/15 motion-reduce:transition-none"
-          >
+          <motion.div initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30 transition duration-700 hover:border-white/15 motion-reduce:transition-none">
             <div className="relative aspect-[4/5]">
-              {character.image ? (
-                <Image
-                  src={character.image}
-                  alt={character.name}
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) min(100vw - 3rem, 520px), 520px"
-                  className="object-cover transition duration-1000 hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
-                />
-              ) : (
-                <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.35),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />
-              )}
+              {character.image ? <Image src={character.image} alt={character.name} fill priority sizes="(max-width: 1024px) min(100vw - 3rem, 520px), 520px" className="object-cover transition duration-1000 hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100" /> : <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.35),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />}
               <div className="absolute inset-0 bg-gradient-to-t from-[#07070b] via-transparent to-transparent" />
               <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_20%,rgba(255,255,255,.08)_48%,transparent_65%)] opacity-0 transition-opacity duration-700 hover:opacity-100 motion-reduce:transition-none motion-reduce:hover:opacity-0" />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Character archive</p>
-              <p className="mt-2 text-sm text-white/50">{character.favorites.toLocaleString()} community favorites</p>
-            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-6"><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Character archive</p><p className="mt-2 text-sm text-white/50">{character.favorites.toLocaleString()} community favorites</p></div>
           </motion.div>
         </Reveal>
 
         <div className="relative max-w-3xl">
           <Reveal>
             <p className="text-[10px] uppercase tracking-[.28em] text-violet-300">Profile / {character.id}</p>
-            <h1 className="mt-4 text-[clamp(3.4rem,8vw,7.5rem)] font-black leading-[.84] tracking-[-.065em]">
-              {character.name}
-            </h1>
-
-            {character.nicknames.length > 0 && (
-              <div className="mt-7 flex flex-wrap gap-2">
-                {character.nicknames.slice(0, 5).map((nickname) => (
-                  <span key={nickname} className="rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[10px] text-white/55">
-                    {nickname}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <p className="mt-8 max-w-2xl whitespace-pre-line text-sm leading-7 text-white/55">
-              {character.about || "No biography is available for this character yet."}
-            </p>
-
+            <h1 className="mt-4 text-[clamp(3.4rem,8vw,7.5rem)] font-black leading-[.84] tracking-[-.065em]">{character.name}</h1>
+            {character.nicknames.length > 0 && <div className="mt-7 flex flex-wrap gap-2">{character.nicknames.slice(0, 5).map((nickname) => <span key={nickname} className="rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[10px] text-white/55">{nickname}</span>)}</div>}
+            <p className="mt-8 max-w-2xl whitespace-pre-line text-sm leading-7 text-white/55">{character.about || "No biography is available for this character yet."}</p>
             <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5">
-                <p className="text-[9px] uppercase tracking-[.2em] text-white/30">Anime appearances</p>
-                <p className="mt-2 text-2xl font-bold">{character.anime.length}</p>
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5">
-                <p className="text-[9px] uppercase tracking-[.2em] text-white/30">Manga appearances</p>
-                <p className="mt-2 text-2xl font-bold">{character.manga.length}</p>
-              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5"><p className="text-[9px] uppercase tracking-[.2em] text-white/30">Anime appearances</p><p className="mt-2 text-2xl font-bold">{character.anime.length}</p></div>
+              <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5"><p className="text-[9px] uppercase tracking-[.2em] text-white/30">Manga appearances</p><p className="mt-2 text-2xl font-bold">{character.manga.length}</p></div>
             </div>
           </Reveal>
 
           {(character.anime.length > 0 || character.manga.length > 0) && (
             <Reveal>
               <section className="mt-12 border-t border-white/8 pt-8" aria-labelledby="appearances-heading">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Connected worlds</p>
-                    <h2 id="appearances-heading" className="mt-2 text-2xl font-bold tracking-tight">Appearances</h2>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[.18em] text-white/25">Top entries</span>
-                </div>
-
+                <div className="flex items-end justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Connected worlds</p><h2 id="appearances-heading" className="mt-2 text-2xl font-bold tracking-tight">Appearances</h2></div><span className="text-[10px] uppercase tracking-[.18em] text-white/25">Top entries</span></div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {character.anime.slice(0, 6).map((entry) => (
-                    entry.url ? (
-                      <a
-                        key={`anime-${entry.mal_id}`}
-                        href={entry.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                      >
-                        <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
-                      </a>
-                    ) : (
-                      <div key={`anime-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4">
-                        <p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p>
-                      </div>
-                    )
-                  ))}
-                  {character.manga.slice(0, 6).map((entry) => (
-                    entry.url ? (
-                      <a
-                        key={`manga-${entry.mal_id}`}
-                        href={entry.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-                      >
-                        <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p>
-                      </a>
-                    ) : (
-                      <div key={`manga-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4">
-                        <p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p>
-                      </div>
-                    )
-                  ))}
+                  {character.anime.slice(0, 6).map((entry) => entry.url ? <a key={`anime-${entry.mal_id}`} href={entry.url} target="_blank" rel="noreferrer" className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"><p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p><p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p></a> : <div key={`anime-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4"><p className="text-[9px] uppercase tracking-[.2em] text-violet-300/70">Anime</p><p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p></div>)}
+                  {character.manga.slice(0, 6).map((entry) => entry.url ? <a key={`manga-${entry.mal_id}`} href={entry.url} target="_blank" rel="noreferrer" className="group rounded-2xl border border-white/8 bg-white/[.035] p-4 transition hover:-translate-y-0.5 hover:border-sky-300/25 hover:bg-white/[.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"><p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p><p className="mt-2 line-clamp-2 text-sm font-semibold text-white/80 group-hover:text-white">{entry.title}</p></a> : <div key={`manga-${entry.mal_id}`} className="rounded-2xl border border-white/8 bg-white/[.035] p-4"><p className="text-[9px] uppercase tracking-[.2em] text-sky-300/70">Manga</p><p className="mt-2 line-clamp-2 text-sm font-semibold text-white/60">{entry.title}</p></div>)}
                 </div>
               </section>
             </Reveal>
           )}
 
           <Reveal>
+            <section className="mt-12 border-t border-white/8 pt-8" aria-labelledby="gallery-heading">
+              <div className="flex items-end justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Visual archive</p><h2 id="gallery-heading" className="mt-2 text-2xl font-bold tracking-tight">Gallery</h2></div><span className="text-[10px] uppercase tracking-[.18em] text-white/25">{gallery.length ? `${gallery.length} images` : "Character artwork"}</span></div>
+              {galleryLoading ? <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"><div className="motion-safe:animate-pulse aspect-[4/5] rounded-2xl bg-white/[.045]" /><div className="motion-safe:animate-pulse aspect-[4/5] rounded-2xl bg-white/[.045]" /><div className="motion-safe:animate-pulse hidden aspect-[4/5] rounded-2xl bg-white/[.045] sm:block" /></div> : gallery.length > 0 ? <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">{gallery.map((image, index) => <a key={`${image}-${index}`} href={image} target="_blank" rel="noreferrer" className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/8 bg-white/[.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"><Image src={image} alt={`${character.name} gallery image ${index + 1}`} fill sizes="(max-width: 640px) 50vw, 33vw" className="object-cover transition duration-700 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" /><div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none" /></a>)}</div> : <div className="mt-5 rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center text-xs text-white/35">No additional artwork is available for this character.</div>}
+            </section>
+          </Reveal>
+
+          <Reveal>
             <div className="mt-8 flex flex-wrap gap-3">
-              {character.url && (
-                <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:scale-100">
-                  Open source profile <ExternalLink size={13} />
-                </a>
-              )}
-              <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none">
-                Explore more characters
-              </Link>
+              {character.url && <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 motion-reduce:transition-none motion-reduce:hover:scale-100">Open source profile <ExternalLink size={13} /></a>}
+              <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70 motion-reduce:transition-none">Explore more characters</Link>
             </div>
           </Reveal>
         </div>
