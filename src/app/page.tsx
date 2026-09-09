@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Shuffle, Sparkles, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArchiveControls } from "./components/ArchiveControls";
 import { CharacterCard } from "./components/CharacterCard";
@@ -24,6 +25,7 @@ const fallbackCharacters: Character[] = [
 const FAVORITES_KEY = "anime-character-hub:favorites";
 
 export default function Home() {
+  const router = useRouter();
   const [characters, setCharacters] = useState<Character[]>(fallbackCharacters);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "saved">("all");
@@ -97,9 +99,7 @@ export default function Home() {
   const randomCharacter = () => {
     if (!characters.length) return;
     const next = characters[Math.floor(Math.random() * characters.length)];
-    setQuery(next.name);
-    setFilter("all");
-    document.getElementById("discover")?.scrollIntoView({ behavior: "smooth" });
+    router.push(`/characters/${next.id}`);
   };
 
   return (
