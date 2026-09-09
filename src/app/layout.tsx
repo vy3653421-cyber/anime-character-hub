@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { RecentActivity } from "./components/RecentActivity";
+import { VoiceCast } from "./components/VoiceCast";
 
 export const metadata: Metadata = {
   title: "Anime Character Hub",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <RecentActivity />
+        <VoiceCast />
       </body>
     </html>
   );
