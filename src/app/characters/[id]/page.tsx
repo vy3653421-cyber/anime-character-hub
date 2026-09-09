@@ -1,0 +1,148 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft, ExternalLink, Heart, LoaderCircle, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+
+type CharacterProfile = {
+  id: number;
+  name: string;
+  about: string | null;
+  image: string | null;
+  favorites: number;
+  url: string | null;
+  nicknames: string[];
+  anime: Array<{ mal_id: number; title: string; url?: string }>;
+  manga: Array<{ mal_id: number; title: string; url?: string }>;
+};
+
+export default function CharacterPage({ params }: { params: Promise<{ id: string }> }) {
+  const [character, setCharacter] = useState<CharacterProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { id } = await params;
+        const response = await fetch(`/api/characters/${id}`);
+        if (!response.ok) throw new Error("Profile request failed");
+        setCharacter((await response.json()) as CharacterProfile);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [params]);
+
+  if (loading) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#07070b] text-white">
+        <div className="flex items-center gap-3 text-xs uppercase tracking-[.22em] text-white/40">
+          <LoaderCircle className="animate-spin" size={16} /> Loading profile
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !character) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#07070b] px-6 text-center text-white">
+        <div>
+          <p className="text-xs uppercase tracking-[.22em] text-violet-300">Profile unavailable</p>
+          <h1 className="mt-3 text-3xl font-bold">Character not found</h1>
+          <Link href="/" className="mt-7 inline-flex rounded-full bg-white px-5 py-3 text-xs font-bold text-black">
+            Return to archive
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#07070b] text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(116,87,255,.2),transparent_34%),radial-gradient(circle_at_10%_85%,rgba(28,101,173,.12),transparent_30%)]" />
+
+      <header className="relative z-10 flex h-20 items-center justify-between border-b border-white/8 px-6 md:px-12">
+        <Link href="/" className="flex items-center gap-3 text-white/65 transition hover:text-white">
+          <ArrowLeft size={17} />
+          <span className="text-xs font-semibold uppercase tracking-[.2em]">Back to archive</span>
+        </Link>
+        <div className="hidden items-center gap-2 text-xs font-semibold tracking-[.2em] md:flex">
+          <Sparkles size={14} /> ANIME<span className="text-white/30">//</span>HUB
+        </div>
+        <button
+          onClick={() => setSaved((value) => !value)}
+          className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/75 transition hover:bg-white/10"
+          aria-label="Save character"
+        >
+          <Heart size={16} fill={saved ? "currentColor" : "none"} />
+        </button>
+      </header>
+
+      <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1500px] items-center gap-10 px-6 py-12 md:px-12 lg:grid-cols-[minmax(320px,520px)_1fr] lg:gap-20 lg:py-16">
+        <div className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[.035] shadow-2xl shadow-violet-950/30">
+          <div className="aspect-[4/5]">
+            {character.image ? (
+              <img src={character.image} alt={character.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.35),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07070b] via-transparent to-transparent" />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <p className="text-[10px] uppercase tracking-[.25em] text-violet-300">Character archive</p>
+            <p className="mt-2 text-sm text-white/50">{character.favorites.toLocaleString()} community favorites</p>
+          </div>
+        </div>
+
+        <div className="relative max-w-3xl">
+          <p className="text-[10px] uppercase tracking-[.28em] text-violet-300">Profile // {character.id}</p>
+          <h1 className="mt-4 text-[clamp(3.4rem,8vw,7.5rem)] font-black leading-[.84] tracking-[-.065em]">
+            {character.name}
+          </h1>
+
+          {character.nicknames.length > 0 && (
+            <div className="mt-7 flex flex-wrap gap-2">
+              {character.nicknames.slice(0, 5).map((nickname) => (
+                <span key={nickname} className="rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[10px] text-white/55">
+                  {nickname}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-8 max-w-2xl whitespace-pre-line text-sm leading-7 text-white/55">
+            {character.about || "No biography is available for this character yet."}
+          </p>
+
+          <div className="mt-10 grid max-w-xl gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5">
+              <p className="text-[9px] uppercase tracking-[.2em] text-white/30">Anime appearances</p>
+              <p className="mt-2 text-2xl font-bold">{character.anime.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/8 bg-white/[.035] p-5">
+              <p className="text-[9px] uppercase tracking-[.2em] text-white/30">Manga appearances</p>
+              <p className="mt-2 text-2xl font-bold">{character.manga.length}</p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {character.url && (
+              <a href={character.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03]">
+                Open source profile <ExternalLink size={13} />
+              </a>
+            )}
+            <Link href="/" className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-xs font-semibold text-white/70 transition hover:bg-white/10">
+              Explore more characters
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
