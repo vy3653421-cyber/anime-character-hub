@@ -32,6 +32,21 @@ type CatalogResponse = {
   hasNextPage?: boolean;
 };
 
+function ArchiveSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="overflow-hidden rounded-3xl border border-white/8 bg-white/[.035]">
+          <div className="relative aspect-[4/5] animate-pulse bg-white/[.045]">
+            <div className="absolute inset-x-5 bottom-5 h-3 w-2/5 rounded-full bg-white/[.08]" />
+            <div className="absolute inset-x-5 bottom-11 h-5 w-3/4 rounded-full bg-white/[.08]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const [characters, setCharacters] = useState<Character[]>(fallbackCharacters);
@@ -45,6 +60,7 @@ export default function Home() {
   const [catalogPage, setCatalogPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -115,7 +131,7 @@ export default function Home() {
     }, query.trim() ? 300 : 0);
 
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, retryToken]);
 
   const filteredCharacters = useMemo(() => {
     return characters
@@ -131,6 +147,12 @@ export default function Home() {
     );
   };
 
+  const resetArchive = () => {
+    setQuery("");
+    setFilter("all");
+    setSort("popular");
+  };
+
   const randomCharacter = () => {
     if (!characters.length) return;
     const next = characters[Math.floor(Math.random() * characters.length)];
@@ -140,6 +162,7 @@ export default function Home() {
   const loadMore = async () => {
     if (loadingMore || !hasNextPage) return;
     setLoadingMore(true);
+    setCatalogError(false);
     try {
       const nextPage = catalogPage + 1;
       const search = query.trim();
@@ -208,26 +231,25 @@ export default function Home() {
         <div className="mx-auto max-w-[1500px]">
           <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">The archive</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Discover characters</h2></div>
-            <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} sort={sort} onSortChange={setSort} savedCount={favorites.length} />
+            <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} sort={sort} onSortChange={setSort} savedCount={favorites.length} onReset={resetArchive} />
           </div>
 
-          {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its available entries.</div>}
-          {catalogLoading && <div className="mb-6 text-xs uppercase tracking-[.2em] text-white/30" aria-live="polite">Loading character archive…</div>}
+          {catalogError && <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50"><span>Live catalog is unavailable right now, so the archive is showing its available entries.</span><button type="button" onClick={() => setRetryToken((value) => value + 1)} className="rounded-full border border-white/10 bg-white/[.04] px-3 py-1.5 font-semibold text-white/65 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">Retry</button></div>}
 
           <div className="mb-5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-white/25" aria-live="polite">
             <span>{filteredCharacters.length} {filteredCharacters.length === 1 ? "character" : "characters"} visible</span>
             {query && !catalogLoading ? <span>Search results · page {catalogPage}</span> : <span>Page {catalogPage}</span>}
           </div>
 
-          <div id="popular" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {catalogLoading ? <ArchiveSkeleton /> : <div id="popular" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {filteredCharacters.map((character, index) => (
               <Reveal key={character.id}>
                 <CharacterCard character={character} rank={index + 1} saved={favorites.includes(character.id)} onToggleSaved={toggleFavorite} />
               </Reveal>
             ))}
-          </div>
+          </div>}
 
-          {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">{filter === "saved" ? "No saved characters" : "No character found"}</p><p className="mt-2 text-xs text-white/35">{filter === "saved" ? "Save characters with the star button to build your collection." : "Try another name or clear the search."}</p></div>}
+          {!catalogLoading && filteredCharacters.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 py-20 text-center"><p className="text-sm font-semibold">{filter === "saved" ? "No saved characters" : "No character found"}</p><p className="mt-2 text-xs text-white/35">{filter === "saved" ? "Save characters with the star button to build your collection." : "Try another name or clear the search."}</p><button type="button" onClick={resetArchive} className="mt-6 rounded-full border border-white/10 bg-white/[.045] px-5 py-2.5 text-xs font-semibold text-white/65 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70">Reset archive</button></div>}
 
           {filter === "all" && hasNextPage && (
             <div className="mt-10 flex justify-center">
@@ -239,7 +261,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer id="about" className="border-t border-white/8 px-6 py-10 text-center text-[10px] uppercase tracking-[.2em] text-white/25">Anime Character Hub · Cinematic character archive</footer>
+      <footer id="about" className="border-t border-white/8 px-6 py-10 text-center text-[10px] uppercase tracking-[.2em] text-white/25">Anime / Hub · Character discovery archive</footer>
     </main>
   );
 }
