@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Search, Shuffle, Sparkles, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ArchiveControls } from "./components/ArchiveControls";
@@ -34,12 +33,16 @@ export default function Home() {
   const [catalogError, setCatalogError] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(FAVORITES_KEY);
-      if (stored) setFavorites(JSON.parse(stored) as number[]);
-    } catch {
-      // Ignore unavailable or malformed local storage.
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(FAVORITES_KEY);
+        if (stored) setFavorites(JSON.parse(stored) as number[]);
+      } catch {
+        // Ignore unavailable or malformed local storage.
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -101,7 +104,7 @@ export default function Home() {
       <header className="relative z-20 flex h-20 items-center justify-between border-b border-white/8 px-6 md:px-12">
         <a href="#top" className="flex items-center gap-3">
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-white text-black shadow-[0_0_30px_rgba(255,255,255,.18)]"><Sparkles size={17} /></div>
-          <span className="text-sm font-semibold tracking-[.22em]">ANIME<span className="text-white/35">//</span>HUB</span>
+          <span className="text-sm font-semibold tracking-[.22em]">ANIME<span className="text-white/35">/</span>HUB</span>
         </a>
         <nav className="hidden items-center gap-8 text-xs font-medium text-white/55 md:flex">
           <a className="text-white" href="#discover">Discover</a>
