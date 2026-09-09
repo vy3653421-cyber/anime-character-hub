@@ -28,6 +28,7 @@ export default function Home() {
   const [characters, setCharacters] = useState<Character[]>(fallbackCharacters);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "saved">("all");
+  const [sort, setSort] = useState<"popular" | "name">("popular");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
@@ -68,12 +69,14 @@ export default function Home() {
 
   const filteredCharacters = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return characters.filter((character) => {
-      const matchesQuery = !normalized || character.name.toLowerCase().includes(normalized);
-      const matchesFilter = filter === "all" || favorites.includes(character.id);
-      return matchesQuery && matchesFilter;
-    });
-  }, [characters, favorites, filter, query]);
+    return characters
+      .filter((character) => {
+        const matchesQuery = !normalized || character.name.toLowerCase().includes(normalized);
+        const matchesFilter = filter === "all" || favorites.includes(character.id);
+        return matchesQuery && matchesFilter;
+      })
+      .sort((a, b) => (sort === "popular" ? b.favorites - a.favorites : a.name.localeCompare(b.name)));
+  }, [characters, favorites, filter, query, sort]);
 
   const featured = characters[0];
 
@@ -133,7 +136,7 @@ export default function Home() {
         <div className="mx-auto max-w-[1500px]">
           <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div><p className="text-[10px] uppercase tracking-[.25em] text-violet-300">The archive</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Discover characters</h2></div>
-            <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} savedCount={favorites.length} />
+            <ArchiveControls query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} sort={sort} onSortChange={setSort} savedCount={favorites.length} />
           </div>
 
           {catalogError && <div className="mb-6 rounded-2xl border border-amber-200/10 bg-amber-200/[.04] px-4 py-3 text-xs text-white/50">Live catalog is unavailable right now, so the archive is showing its fallback entries.</div>}
