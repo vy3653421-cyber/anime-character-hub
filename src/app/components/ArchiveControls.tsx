@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownAZ, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type Props = {
   query: string;
@@ -15,6 +16,11 @@ type Props = {
 
 export function ArchiveControls({ query, onQueryChange, filter, onFilterChange, sort, onSortChange, savedCount, onReset }: Props) {
   const hasActiveView = Boolean(query) || filter === "saved" || sort === "name";
+  const [shortcutLabel, setShortcutLabel] = useState("Ctrl K");
+
+  useEffect(() => {
+    setShortcutLabel(/Mac|iPhone|iPad|iPod/i.test(window.navigator.platform) ? "⌘ K" : "Ctrl K");
+  }, []);
 
   return (
     <div className="space-y-3 lg:sticky lg:top-4 lg:z-30">
@@ -24,7 +30,7 @@ export function ArchiveControls({ query, onQueryChange, filter, onFilterChange, 
             <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/35 transition-colors duration-300 group-focus-within:text-violet-300" size={16} aria-hidden="true" />
             <label htmlFor="search" className="sr-only">Search characters</label>
             <input id="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search the character archive…" autoComplete="off" spellCheck={false} className="w-full rounded-2xl border border-transparent bg-white/[.035] py-3.5 pl-11 pr-24 text-sm outline-none transition-[background-color,border-color,box-shadow] duration-300 placeholder:text-white/30 focus:border-violet-300/35 focus:bg-white/[.065] focus:shadow-[0_0_0_4px_rgba(167,139,250,.06)]" />
-            <div className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-white/8 bg-white/[.04] px-2 py-1 text-[9px] font-medium text-white/25 sm:flex"><span>⌘</span><span>K</span></div>
+            {!query && <div className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-white/8 bg-white/[.04] px-2 py-1 text-[9px] font-medium text-white/25 sm:flex" aria-hidden="true"><span>{shortcutLabel}</span></div>}
             {query && <button type="button" onClick={() => onQueryChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/[.06] p-1.5 text-white/40 transition duration-300 hover:scale-105 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80" aria-label="Clear search"><X size={15} aria-hidden="true" /></button>}
           </div>
 
