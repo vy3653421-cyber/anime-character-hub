@@ -29,6 +29,7 @@ export default function Home() {
   const [filter, setFilter] = useState<"all" | "saved">("all");
   const [sort, setSort] = useState<"popular" | "name">("popular");
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [favoritesHydrated, setFavoritesHydrated] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
 
@@ -39,6 +40,8 @@ export default function Home() {
         if (stored) setFavorites(JSON.parse(stored) as number[]);
       } catch {
         // Ignore unavailable or malformed local storage.
+      } finally {
+        setFavoritesHydrated(true);
       }
     }, 0);
 
@@ -46,12 +49,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!favoritesHydrated) return;
+
     try {
       window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     } catch {
       // Favorites remain available for the current session.
     }
-  }, [favorites]);
+  }, [favorites, favoritesHydrated]);
 
   useEffect(() => {
     const loadCharacters = async () => {
@@ -111,7 +116,7 @@ export default function Home() {
           <a href="#popular">Popular</a>
           <a href="#about">About</a>
         </nav>
-        <button onClick={() => document.getElementById("search")?.focus()} className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/70 transition hover:bg-white/10" aria-label="Focus search"><Search size={17} /></button>
+        <button onClick={() => document.getElementById("search")?.focus()} className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70" aria-label="Focus search"><Search size={17} /></button>
       </header>
 
       <section id="top" className="relative mx-auto flex min-h-[650px] max-w-[1500px] items-center px-6 py-16 md:px-12 lg:min-h-[730px]">
@@ -121,8 +126,8 @@ export default function Home() {
           <h1 className="text-[clamp(4rem,9vw,8.5rem)] font-black leading-[.78] tracking-[-.07em]">{featured?.name?.split(" ")[0]?.toUpperCase()}<br /><span className="text-white/25">{featured?.name?.split(" ").slice(1).join(" ").toUpperCase()}</span></h1>
           <p className="mt-8 max-w-lg text-sm leading-7 text-white/50">A cinematic character archive built for discovery. Search the catalog, save favorites, jump to a random character and explore the people that define anime worlds.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#discover" className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03]">Explore archive <span className="transition group-hover:translate-x-1">→</span></a>
-            <button onClick={randomCharacter} className="flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-5 py-3 text-xs font-semibold text-white/75 hover:bg-white/10"><Shuffle size={14} /> Random character</button>
+            <a href="#discover" className="group flex items-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold text-black transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">Explore archive <span className="transition group-hover:translate-x-1">→</span></a>
+            <button onClick={randomCharacter} className="flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-5 py-3 text-xs font-semibold text-white/75 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70"><Shuffle size={14} /> Random character</button>
           </div>
           <div className="mt-10 flex gap-8 text-[10px] uppercase tracking-[.18em] text-white/35"><span><b className="mr-2 text-white/80">{characters.length || "∞"}</b>Loaded</span><span><b className="mr-2 text-white/80">{favorites.length}</b>Saved</span><span><b className="mr-2 text-white/80">24</b>Per feed</span></div>
         </div>
@@ -130,7 +135,7 @@ export default function Home() {
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl shadow-violet-950/30">
             {featured?.image ? <img src={featured.image} alt={featured.name} className="h-full w-full object-cover opacity-80" /> : <div className="h-full w-full bg-[radial-gradient(circle_at_50%_30%,rgba(167,139,250,.4),transparent_35%),linear-gradient(145deg,#171321,#09090d)]" />}
             <div className="absolute inset-0 bg-gradient-to-t from-[#07070b] via-transparent to-violet-500/10" />
-            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">Top character</p><p className="mt-1 text-xl font-bold">{featured?.name}</p></div><button onClick={() => featured && toggleFavorite(featured.id)} className="rounded-full border border-white/10 bg-black/30 p-2"><Star size={16} fill={featured && favorites.includes(featured.id) ? "currentColor" : "none"} aria-hidden="true" /></button></div>
+            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">Top character</p><p className="mt-1 text-xl font-bold">{featured?.name}</p></div><button onClick={() => featured && toggleFavorite(featured.id)} className="rounded-full border border-white/10 bg-black/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/70" aria-label={featured && favorites.includes(featured.id) ? `Remove ${featured.name} from saved` : `Save ${featured?.name ?? "featured character"}`}><Star size={16} fill={featured && favorites.includes(featured.id) ? "currentColor" : "none"} aria-hidden="true" /></button></div>
           </div>
         </div>
       </section>
