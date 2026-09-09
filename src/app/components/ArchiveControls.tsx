@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownAZ, Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { ArrowDownAZ, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 
 type Props = {
   query: string;
@@ -14,6 +14,12 @@ type Props = {
 
 export function ArchiveControls({ query, onQueryChange, filter, onFilterChange, sort, onSortChange, savedCount }: Props) {
   const hasActiveView = Boolean(query) || filter === "saved" || sort === "name";
+
+  const resetView = () => {
+    onQueryChange("");
+    onFilterChange("all");
+    onSortChange("popular");
+  };
 
   return (
     <div className="space-y-3 lg:sticky lg:top-4 lg:z-30">
@@ -35,7 +41,7 @@ export function ArchiveControls({ query, onQueryChange, filter, onFilterChange, 
               <span>⌘</span><span>K</span>
             </div>
             {query && (
-              <button type="button" onClick={() => onQueryChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/[.06] p-1.5 text-white/40 transition duration-300 hover:scale-105 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80 sm:right-3" aria-label="Clear search">
+              <button type="button" onClick={() => onQueryChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/[.06] p-1.5 text-white/40 transition duration-300 hover:scale-105 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80" aria-label="Clear search">
                 <X size={15} aria-hidden="true" />
               </button>
             )}
@@ -59,6 +65,12 @@ export function ArchiveControls({ query, onQueryChange, filter, onFilterChange, 
                 <option value="name">Name A–Z</option>
               </select>
             </label>
+
+            {hasActiveView && (
+              <button type="button" onClick={resetView} className="flex items-center gap-2 rounded-2xl border border-white/8 bg-white/[.025] px-3.5 py-2.5 text-xs font-semibold text-white/45 transition-[background-color,color,border-color,transform] duration-300 hover:-translate-y-px hover:border-white/15 hover:bg-white/[.055] hover:text-white" aria-label="Reset archive filters">
+                <RotateCcw size={13} aria-hidden="true" /> Reset
+              </button>
+            )}
           </div>
         </div>
       </div>
