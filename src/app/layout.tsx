@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { RecentActivity } from "./components/RecentActivity";
+import { SavedCollectionLink } from "./components/SavedCollectionLink";
 import { VoiceCast } from "./components/VoiceCast";
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <RecentActivity />
+        <SavedCollectionLink />
         <VoiceCast />
       </body>
     </html>
