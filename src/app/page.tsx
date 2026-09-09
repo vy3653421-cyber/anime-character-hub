@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Shuffle, Sparkles, Star, X } from "lucide-react";
+import { Search, Shuffle, Sparkles, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ArchiveControls } from "./components/ArchiveControls";
+import { CharacterCard } from "./components/CharacterCard";
+import { Reveal } from "./components/Reveal";
 
 type Character = {
   id: number;
@@ -122,7 +124,7 @@ export default function Home() {
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl shadow-violet-950/30">
             {featured?.image ? <img src={featured.image} alt={featured.name} className="h-full w-full object-cover opacity-80" /> : <div className="h-full w-full bg-[radial-gradient(circle_at_50%_30%,rgba(167,139,250,.4),transparent_35%),linear-gradient(145deg,#171321,#09090d)]" />}
             <div className="absolute inset-0 bg-gradient-to-t from-[#07070b] via-transparent to-violet-500/10" />
-            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">Top character</p><p className="mt-1 text-xl font-bold">{featured?.name}</p></div><button onClick={() => featured && toggleFavorite(featured.id)} className="rounded-full border border-white/10 bg-black/30 p-2" aria-label="Save featured character"><Star size={16} fill={featured && favorites.includes(featured.id) ? "currentColor" : "none"} /></button></div>
+            <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[.2em] text-white/45">Top character</p><p className="mt-1 text-xl font-bold">{featured?.name}</p></div><button onClick={() => featured && toggleFavorite(featured.id)} className="rounded-full border border-white/10 bg-black/30 p-2"><Star size={16} fill={featured && favorites.includes(featured.id) ? "currentColor" : "none"} aria-hidden="true" /></button></div>
           </div>
         </div>
       </section>
@@ -139,15 +141,9 @@ export default function Home() {
 
           <div id="popular" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {filteredCharacters.map((character, index) => (
-              <article key={character.id} className="group relative overflow-hidden rounded-3xl border border-white/8 bg-white/[.035] transition duration-500 hover:-translate-y-1 hover:border-white/15">
-                <Link href={`/characters/${character.id}`} aria-label={`View ${character.name} profile`} className="absolute inset-0 z-10" />
-                <div className="aspect-[4/5] overflow-hidden">
-                  {character.image ? <img src={character.image} alt={character.name} loading={index > 3 ? "lazy" : "eager"} className="h-full w-full object-cover opacity-70 transition duration-700 group-hover:scale-105 group-hover:opacity-95" /> : <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(167,139,250,.32),transparent_35%),linear-gradient(145deg,#191421,#09090d)]" />}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#09090d] via-transparent to-transparent" />
-                </div>
-                <button onClick={() => toggleFavorite(character.id)} className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-black/35 p-2 text-white/70 backdrop-blur-md transition hover:bg-black/60 hover:text-white" aria-label={`Save ${character.name}`}><Star size={14} fill={favorites.includes(character.id) ? "currentColor" : "none"} /></button>
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 p-5"><div className="mb-2 text-[9px] uppercase tracking-[.2em] text-violet-300">Rank {index + 1}</div><h3 className="text-lg font-bold">{character.name}</h3><p className="mt-1 text-xs text-white/40">{character.favorites.toLocaleString()} community favorites</p></div>
-              </article>
+              <Reveal key={character.id}>
+                <CharacterCard character={character} rank={index + 1} saved={favorites.includes(character.id)} onToggleSaved={toggleFavorite} />
+              </Reveal>
             ))}
           </div>
 
