@@ -36,7 +36,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         try {
           const stored = window.localStorage.getItem(FAVORITES_KEY);
           const ids = stored ? (JSON.parse(stored) as number[]) : [];
-          setSaved(ids.includes(profile.id));
+          window.setTimeout(() => setSaved(ids.includes(profile.id)), 0);
         } catch {
           // Ignore unavailable or malformed local storage.
         }
@@ -95,7 +95,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
           <span className="text-xs font-semibold uppercase tracking-[.2em]">Back to archive</span>
         </Link>
         <div className="hidden items-center gap-2 text-xs font-semibold tracking-[.2em] md:flex">
-          <Sparkles size={14} /> ANIME<span className="text-white/30">//</span>HUB
+          <Sparkles size={14} /> ANIME<span className="text-white/30">/</span>HUB
         </div>
         <button
           onClick={toggleSaved}
@@ -123,7 +123,7 @@ export default function CharacterPage({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="relative max-w-3xl">
-          <p className="text-[10px] uppercase tracking-[.28em] text-violet-300">Profile // {character.id}</p>
+          <p className="text-[10px] uppercase tracking-[.28em] text-violet-300">Profile / {character.id}</p>
           <h1 className="mt-4 text-[clamp(3.4rem,8vw,7.5rem)] font-black leading-[.84] tracking-[-.065em]">
             {character.name}
           </h1>
