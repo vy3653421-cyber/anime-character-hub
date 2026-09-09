@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { RecentActivity } from "./components/RecentActivity";
 
 export const metadata: Metadata = {
   title: "Anime Character Hub",
@@ -7,5 +8,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <RecentActivity />
+      </body>
+    </html>
+  );
 }
