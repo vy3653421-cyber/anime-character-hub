@@ -19,12 +19,31 @@ const fallbackCharacters: Character[] = [
   { id: 4, name: "Satoru Gojo", image: null, favorites: 0, url: null },
 ];
 
+const FAVORITES_KEY = "anime-character-hub:favorites";
+
 export default function Home() {
   const [characters, setCharacters] = useState<Character[]>(fallbackCharacters);
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(FAVORITES_KEY);
+      if (stored) setFavorites(JSON.parse(stored) as number[]);
+    } catch {
+      // Ignore unavailable or malformed local storage.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    } catch {
+      // Favorites remain available for the current session.
+    }
+  }, [favorites]);
 
   useEffect(() => {
     const loadCharacters = async () => {
