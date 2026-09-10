@@ -10,9 +10,9 @@
       html, body { margin: 0; width: 100%; height: 100%; background: transparent; }
       body { overflow: hidden; }
       #app { position: relative; width: 100%; height: 100%; }
-      #avatar { position: absolute; inset: 0; }
+      #avatar { position: absolute; inset: 0; -webkit-app-region: drag; }
       #avatar canvas { display: block; width: 100%; height: 100%; }
-      .hud { position: absolute; left: 20px; right: 20px; bottom: 20px; max-height: calc(100% - 40px); overflow: auto; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(16,16,22,.82); backdrop-filter: blur(18px); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+      .hud { position: absolute; left: 20px; right: 20px; bottom: 20px; max-height: calc(100% - 40px); overflow: auto; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(16,16,22,.82); backdrop-filter: blur(18px); box-shadow: 0 20px 60px rgba(0,0,0,.35); -webkit-app-region: no-drag; }
       .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; background: rgba(120,170,255,.12); color: #bcd4ff; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
       h1 { margin: 9px 0 5px; font-size: 21px; }
       p { margin: 0; color: #aaaab4; font-size: 12px; line-height: 1.45; }
