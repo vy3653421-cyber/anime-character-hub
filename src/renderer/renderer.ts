@@ -22,6 +22,7 @@ type DesktopTool = { id: string; description: string; risk: string; requiresConf
 
 type DesktopMateBridge = {
   chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
+  resetSession(): Promise<{ ok: boolean; reason?: string }>;
   getSettings(): Promise<DesktopMateSettings>;
   updateSettings(patch: Partial<DesktopMateSettings>): Promise<DesktopMateSettings>;
   listTools(): Promise<DesktopTool[]>;
@@ -37,10 +38,11 @@ const chatLog = document.querySelector<HTMLDivElement>("#chatLog");
 const toolsList = document.querySelector<HTMLDivElement>("#toolsList");
 const chatForm = document.querySelector<HTMLFormElement>("#chatForm");
 const chatInput = document.querySelector<HTMLInputElement>("#chatInput");
+const resetSessionButton = document.querySelector<HTMLButtonElement>("#resetSession");
 const alwaysOnTopButton = document.querySelector<HTMLButtonElement>("#alwaysOnTop");
 const voiceEnabledButton = document.querySelector<HTMLButtonElement>("#voiceEnabled");
 const microphoneButton = document.querySelector<HTMLButtonElement>("#microphone");
-if (!mount || !status || !capabilities || !chatLog || !toolsList || !chatForm || !chatInput || !alwaysOnTopButton || !voiceEnabledButton || !microphoneButton) throw new Error("Desktop Mate renderer mount failed");
+if (!mount || !status || !capabilities || !chatLog || !toolsList || !chatForm || !chatInput || !resetSessionButton || !alwaysOnTopButton || !voiceEnabledButton || !microphoneButton) throw new Error("Desktop Mate renderer mount failed");
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
@@ -276,6 +278,24 @@ if (bridge) {
     chatInput.focus();
   });
 
+  resetSessionButton.addEventListener("click", async () => {
+    resetSessionButton.disabled = true;
+    try {
+      const result = await bridge.resetSession();
+      if (!result.ok) {
+        status.textContent = `Conversation reset unavailable · ${result.reason || "AI provider not configured"}`;
+        return;
+      }
+      chatLog.replaceChildren();
+      status.textContent = "Conversation session reset · persistent memories were kept";
+      chatInput.focus();
+    } catch (error) {
+      status.textContent = `Conversation reset failed · ${error instanceof Error ? error.message : "unknown error"}`;
+    } finally {
+      resetSessionButton.disabled = false;
+    }
+  });
+
   alwaysOnTopButton.addEventListener("click", async () => {
     const settings = await bridge.getSettings();
     const updated = await bridge.updateSettings({ alwaysOnTop: !settings.alwaysOnTop });
@@ -318,6 +338,7 @@ if (bridge) {
 } else {
   renderCard("Bridge", "Unavailable", false);
   chatForm.addEventListener("submit", (event) => event.preventDefault());
+  resetSessionButton.disabled = true;
 }
 
 renderCard("WebGL", "Ready", true);
