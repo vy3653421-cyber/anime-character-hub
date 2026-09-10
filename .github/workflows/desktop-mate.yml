@@ -16,7 +16,10 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm test
-      - run: npm run build
+      - name: Typecheck main process
+        run: npm run build:main
+      - name: Build renderer
+        run: npm run build:renderer
       - run: npm run perf
       - run: node scripts/security-check.mjs
       - run: npm run package:dir
