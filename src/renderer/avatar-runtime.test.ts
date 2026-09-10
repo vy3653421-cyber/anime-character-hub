@@ -34,6 +34,25 @@ test("AvatarRuntime applies a response plan to the animation state", () => {
   assert.equal(updated.state, "happy");
   assert.equal(updated.intensity, 0.55);
   assert.equal(updated.activeClip, "happy");
+  assert.equal(updated.activeWeight, 0.55);
+
+  const strongerPlan = createResponsePlan({
+    responseText: "Really happy.",
+    emotion: "happy",
+    intensity: 0.9,
+    attentionTarget: "user",
+    gesture: "small-wave",
+    posture: "attentive",
+    gaze: "direct",
+    speechStyle: "warm",
+    interruptionPolicy: "allow",
+    avatarState: "happy",
+    toolRequests: [],
+  });
+
+  const stronger = runtime.applyPlan(strongerPlan);
+  assert.equal(stronger.activeClip, "happy");
+  assert.equal(stronger.activeWeight, 0.9);
 
   runtime.dispose();
   assert.equal(runtime.status().loaded, false);
