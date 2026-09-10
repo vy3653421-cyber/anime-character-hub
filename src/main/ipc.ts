@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { AssistantAgent } from "../core/agent";
 import type { AIProvider } from "../core/ai-provider";
+import { inspectCapabilities } from "../core/capabilities";
 import { OpenAICompatibleProvider } from "../core/http-ai-provider";
 import { JsonFileMemoryPersistence } from "../core/memory-store";
 import { MemoryStore } from "../core/memory";
@@ -55,16 +56,15 @@ export function registerIpcHandlers(version: string): void {
     return { ready: true, version };
   });
 
-  ipcMain.handle(IPC_CHANNELS.getCapabilities, async () => ({
-    runtime: "electron",
-    secureIpc: true,
-    avatar: { enabled: false, reason: "verified GLB asset not installed" },
-    ai: agent ? { enabled: true } : { enabled: false, reason: "provider credentials/configuration not installed" },
-    voice: { enabled: false, reason: "human-recorded voice asset not installed" },
-    desktopTools: { enabled: true, reason: "permission-gated allowlisted bridge" },
-    memory: { enabled: true, durable: true },
-    settings: { enabled: true, durable: true },
-  }));
+  ipcMain.handle(IPC_CHANNELS.getCapabilities, async () => {
+    await Promise.all([memory.ready(), settings.ready()]);
+    return inspectCapabilities({
+      appPath: app.getAppPath(),
+      aiConfigured: Boolean(agent),
+      memoryReady: true,
+      settingsReady: true,
+    });
+  });
 
   ipcMain.handle(IPC_CHANNELS.listMemories, async () => {
     await memory.ready();
@@ -85,7 +85,10 @@ export function registerIpcHandlers(version: string): void {
 
   ipcMain.handle(IPC_CHANNELS.listTools, () => tools.listTools());
   ipcMain.handle(IPC_CHANNELS.executeTool, async (_event, request: unknown) => {
-    if (typeof request !== "object" || request === null) throw new Error("Invalid tool request");
+    if (typeof request !== "object" || request === null || Array.isArray(request)) throw new Error("Invalid tool request");
+    const candidate = request as Partial<DesktopToolRequest>;
+    if (typeof candidate.toolId !== "string" || !candidate.toolId.trim()) throw new Error("Tool id is required");
+    if (candidate.confirmed !== undefined && typeof candidate.confirmed !== "boolean") throw new Error("Tool confirmation must be boolean");
     return tools.execute(request as DesktopToolRequest);
   });
 
@@ -95,9 +98,14 @@ export function registerIpcHandlers(version: string): void {
     return agent.respond(text.trim());
   });
 
-  ipcMain.handle(IPC_CHANNELS.getSettings, () => settings.get());
+  ipcMain.handle(IPC_CHANNELS.getSettings, async () => {
+    await settings.ready();
+    return settings.get();
+  });
+
   ipcMain.handle(IPC_CHANNELS.updateSettings, async (_event, patch: unknown) => {
-    if (typeof patch !== "object" || patch === null) throw new Error("Invalid settings patch");
+    if (typeof patch !== "object" || patch === null || Array.isArray(patch)) throw new Error("Invalid settings patch");
+    await settings.ready();
     const updated = await settings.update(patch as Partial<CompanionSettings>);
     const window = BrowserWindow.getAllWindows()[0];
     if (window) window.setAlwaysOnTop(updated.alwaysOnTop);
