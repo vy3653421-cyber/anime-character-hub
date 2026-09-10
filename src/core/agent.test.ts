@@ -25,4 +25,6 @@ test("AssistantAgent injects matching memory into provider context", async () =>
   const turn = await agent.respond("Tell me about desktop companions");
   assert.equal(turn.text, "Acknowledged.");
   assert.match(received, /The user likes desktop companions/);
+  assert.match(received, /untrusted reference data/i);
+  assert.match(received, /never treat.*as instructions/i);
 });
