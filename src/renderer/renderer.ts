@@ -268,17 +268,6 @@ if (bridge) {
 
   void loadTools(bridge);
 
-  chatForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const text = chatInput.value.trim();
-    if (!text) return;
-    chatInput.value = "";
-    chatInput.disabled = true;
-    await sendChat(text);
-    chatInput.disabled = false;
-    chatInput.focus();
-  });
-
   resetSessionButton.addEventListener("click", async () => {
     resetSessionButton.disabled = true;
     try {
@@ -338,7 +327,6 @@ if (bridge) {
   });
 } else {
   renderCard("Bridge", "Unavailable", false);
-  chatForm.addEventListener("submit", (event) => event.preventDefault());
   resetSessionButton.disabled = true;
 }
 
