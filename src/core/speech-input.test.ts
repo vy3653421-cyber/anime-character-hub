@@ -14,7 +14,7 @@ class FakeRecognition {
   stop() { this.started = false; this.onend?.(); }
 }
 
-test("speech input exposes support and forwards recognition results", async () => {
+test("speech input exposes support and forwards array-like recognition results", async () => {
   let instance: FakeRecognition | undefined;
   const input = new BrowserSpeechInput("en-IN", class extends FakeRecognition {
     constructor() {
@@ -30,9 +30,9 @@ test("speech input exposes support and forwards recognition results", async () =
   assert.equal(input.status().listening, true);
   assert.equal(instance?.lang, "en-IN");
 
-  instance?.onresult?.({ results: [
-    Object.assign([{ transcript: " hello ", confidence: 0.91 }], { isFinal: true }),
-  ] });
+  const recognitionResult = Object.assign([{ transcript: " hello ", confidence: 0.91 }], { isFinal: true });
+  const resultList = { 0: recognitionResult, length: 1 };
+  instance?.onresult?.({ results: resultList });
   assert.deepEqual(results, ["hello:true"]);
 
   input.stop();
