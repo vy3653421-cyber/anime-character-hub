@@ -23,8 +23,9 @@ test("MemoryStore ranks exact phrase matches before partial matches", () => {
   const partial = store.save("Desktop companions can run on Windows", ["runtime"]);
   const exact = store.save("Desktop companions", ["project"]);
 
-  assert.equal(store.search("desktop companions")[0]?.id, exact.id);
-  assert.notEqual(store.search("desktop companions")[1]?.id, partial.id);
+  const results = store.search("desktop companions");
+  assert.equal(results[0]?.id, exact.id);
+  assert.equal(results[1]?.id, partial.id);
 });
 
 test("MemoryStore ignores empty search queries", () => {
