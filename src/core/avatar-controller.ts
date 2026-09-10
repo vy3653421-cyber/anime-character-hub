@@ -13,6 +13,7 @@ const DEFAULT_BINDINGS: AnimationBinding[] = [
   { state: "thinking", patterns: [/think/i] },
   { state: "happy", patterns: [/happy/i, /smile/i, /joy/i] },
   { state: "surprised", patterns: [/surprise/i, /shock/i] },
+  { state: "concerned", patterns: [/concern/i, /worried/i, /sad/i] },
   { state: "sleeping", patterns: [/sleep/i, /sleeping/i] },
 ];
 
