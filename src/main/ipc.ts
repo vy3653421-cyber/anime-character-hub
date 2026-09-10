@@ -1,4 +1,4 @@
-import { app, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { AssistantAgent } from "../core/agent";
 import type { AIProvider } from "../core/ai-provider";
 import { OpenAICompatibleProvider } from "../core/http-ai-provider";
@@ -90,6 +90,10 @@ export function registerIpcHandlers(version: string): void {
   ipcMain.handle(IPC_CHANNELS.getSettings, () => settings.get());
   ipcMain.handle(IPC_CHANNELS.updateSettings, async (_event, patch: unknown) => {
     if (typeof patch !== "object" || patch === null) throw new Error("Invalid settings patch");
-    return settings.update(patch as Partial<CompanionSettings>);
+    const updated = await settings.update(patch as Partial<CompanionSettings>);
+    const window = BrowserWindow.getAllWindows()[0];
+    if (window) window.setAlwaysOnTop(updated.alwaysOnTop);
+    app.setLoginItemSettings({ openAtLogin: updated.launchAtLogin });
+    return updated;
   });
 }
