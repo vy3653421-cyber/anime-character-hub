@@ -8,6 +8,7 @@ export interface AvatarRuntimeStatus {
   state: AvatarState;
   intensity: number;
   activeClip?: string;
+  activeWeight?: number;
   morphTargetCount: number;
 }
 
@@ -51,6 +52,7 @@ export class AvatarRuntime {
       state: this.state,
       intensity: this.intensity,
       activeClip: this.activeClip,
+      activeWeight: this.activeAction?.getEffectiveWeight(),
       morphTargetCount: this.morphTargetCount,
     };
   }
@@ -73,7 +75,13 @@ export class AvatarRuntime {
 
     if (!this.mixer) return;
     const clipName = this.controller.resolveCurrentClip(this.clips.map((clip) => clip.name));
-    if (!clipName || clipName === this.activeClip) return;
+    if (!clipName) return;
+
+    if (clipName === this.activeClip && this.activeAction) {
+      this.activeAction.setEffectiveWeight(this.intensity);
+      return;
+    }
+
     const clip = this.clips.find((candidate) => candidate.name === clipName);
     if (!clip) return;
 
