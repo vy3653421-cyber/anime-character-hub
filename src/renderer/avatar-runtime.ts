@@ -3,6 +3,7 @@ import { AvatarAnimationController } from "../core/avatar-controller";
 import type { ResponsePlan } from "../core/response-plan";
 import type { AvatarState } from "../core/avatar-state";
 import { AvatarExpressionController, type AvatarExpressionSet } from "./avatar-expression-controller";
+import { AvatarPhysics } from "./avatar-physics";
 
 export interface AvatarRuntimeStatus {
   loaded: boolean;
@@ -12,17 +13,22 @@ export interface AvatarRuntimeStatus {
   activeWeight?: number;
   morphTargetCount: number;
   expressionCount: number;
+  secondaryPhysicsBound: number;
 }
+
+const SECONDARY_BONE_PATTERN = /(hair|ribbon|accessory|tail|cloth|skirt|ear|ponytail|bang)/i;
 
 export class AvatarRuntime {
   private readonly controller = new AvatarAnimationController();
   private readonly expressions = new AvatarExpressionController();
+  private readonly physics = new AvatarPhysics();
   private mixer?: THREE.AnimationMixer;
   private clips: THREE.AnimationClip[] = [];
   private activeAction?: THREE.AnimationAction;
   private root?: THREE.Object3D;
   private morphTargetCount = 0;
   private expressionCount = 0;
+  private secondaryPhysicsBound = 0;
   private state: AvatarState = "idle";
   private intensity = 1;
   private activeClip?: string;
@@ -39,6 +45,14 @@ export class AvatarRuntime {
     });
     const expressionReport = this.expressions.bind(root);
     this.expressionCount = expressionReport.morphTargets;
+    const secondaryBones = new Set<string>();
+    root.traverse((object) => {
+      if (object.name && SECONDARY_BONE_PATTERN.test(object.name)) secondaryBones.add(object.name);
+    });
+    this.secondaryPhysicsBound = this.physics.bind(
+      root,
+      [...secondaryBones].map((boneName) => ({ boneName })),
+    ).bound;
     this.applyState("idle", 1);
     return this.status();
   }
@@ -59,6 +73,7 @@ export class AvatarRuntime {
   update(deltaSeconds: number): void {
     const delta = Math.max(0, deltaSeconds);
     this.mixer?.update(delta);
+    this.physics.update(delta);
     this.expressions.update(delta);
   }
 
@@ -71,6 +86,7 @@ export class AvatarRuntime {
       activeWeight: this.activeAction?.getEffectiveWeight(),
       morphTargetCount: this.morphTargetCount,
       expressionCount: this.expressionCount,
+      secondaryPhysicsBound: this.secondaryPhysicsBound,
     };
   }
 
@@ -83,7 +99,9 @@ export class AvatarRuntime {
     this.clips = [];
     this.morphTargetCount = 0;
     this.expressionCount = 0;
+    this.secondaryPhysicsBound = 0;
     this.activeClip = undefined;
+    this.physics.clear();
     this.expressions.clearExpressions();
   }
 
