@@ -40,34 +40,29 @@ export class BehaviorBrain {
     const autonomy = clamp(this.config.autonomy);
 
     if (event.type === "user-message") {
-      return this.decision("talking", 0.8, "user", true, "direct user interaction");
+      return this.decision("talking", 0.8, "user", true, "direct user interaction", now);
     }
-
     if (event.type === "task-started") {
-      return this.decision("thinking", 0.7, "none", false);
+      return this.decision("thinking", 0.7, "none", false, undefined, now);
     }
-
     if (event.type === "task-completed") {
       const speak = autonomy >= 60 && this.canSpeak(now);
-      return this.decision("happy", 0.55, "user", speak, "task completed");
+      return this.decision("happy", 0.55, "user", speak, "task completed", now);
     }
-
     if (event.type === "task-failed") {
       const speak = autonomy >= 45 && this.canSpeak(now);
-      return this.decision("concerned" as AvatarState, 0.65, "user", speak, "task failed");
+      return this.decision("concerned", 0.65, "user", speak, "task failed", now);
     }
-
     if (event.type === "user-returned") {
-      return this.decision("happy", 0.3, "user", false);
+      return this.decision("happy", 0.3, "user", false, undefined, now);
     }
-
     if (event.type === "user-idle") {
-      return this.decision("sleeping", 0.35, "none", false);
+      return this.decision("sleeping", 0.35, "none", false, undefined, now);
     }
 
     return now - this.lastEventAt >= this.config.idleAfterMs
-      ? this.decision("sleeping", 0.3, "none", false)
-      : this.decision("idle", 0.2, "environment", false);
+      ? this.decision("sleeping", 0.3, "none", false, undefined, now)
+      : this.decision("idle", 0.2, "environment", false, undefined, now);
   }
 
   markSpoken(now = Date.now()): void {
@@ -83,9 +78,10 @@ export class BehaviorBrain {
     intensity: number,
     attentionTarget: BehaviorDecision["attentionTarget"],
     shouldSpeak: boolean,
-    speechReason?: string,
+    speechReason: string | undefined,
+    now: number,
   ): BehaviorDecision {
-    if (shouldSpeak) this.lastSpokenAt = Date.now();
+    if (shouldSpeak) this.lastSpokenAt = now;
     return { avatarState, intensity, attentionTarget, shouldSpeak, speechReason };
   }
 }
