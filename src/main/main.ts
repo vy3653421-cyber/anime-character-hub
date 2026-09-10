@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
+import { mkdirSync } from "node:fs";
 import { registerIpcHandlers } from "./ipc";
 import { createMainWindow } from "./window";
 import { createTray } from "./tray";
@@ -18,7 +19,7 @@ const openMainWindow = () => {
       event.preventDefault();
       mainWindow?.hide();
     });
-    mainWindow.webContents.once("did-finish-load", () => {
+    mainWindow.webContents.once("did-finish-load", async () => {
       if (process.env.DESKTOP_MATE_SMOKE === "1") {
         const bounds = mainWindow?.getBounds();
         const loadedUrl = mainWindow?.webContents.getURL() ?? "";
@@ -26,7 +27,7 @@ const openMainWindow = () => {
         const validBounds = Boolean(bounds && bounds.width >= 320 && bounds.height >= 240);
         const loadedRenderer = loadedUrl.startsWith("file:") && loadedUrl.endsWith("index.html");
 
-        if (!visible || !validBounds || !loadedRenderer) {
+        if (!visible || !validBounds || !loadedRenderer || !mainWindow) {
           console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", {
             visible,
             bounds,
@@ -37,10 +38,25 @@ const openMainWindow = () => {
           return;
         }
 
+        try {
+          const screenshotDir = path.join(process.cwd(), "qa-artifacts");
+          mkdirSync(screenshotDir, { recursive: true });
+          const image = await mainWindow.webContents.capturePage();
+          await image.toPNG();
+          const screenshotPath = path.join(screenshotDir, "desktop-mate-runtime.png");
+          require("node:fs").writeFileSync(screenshotPath, image.toPNG());
+          console.log("DESKTOP_MATE_VISUAL_QA_ARTIFACT", screenshotPath);
+        } catch (error) {
+          console.error("DESKTOP_MATE_VISUAL_QA_CAPTURE_FAILED", error);
+          quitting = true;
+          app.exit(1);
+          return;
+        }
+
         console.log("DESKTOP_MATE_RUNTIME_QA_OK", {
           visible,
-          width: bounds?.width,
-          height: bounds?.height,
+          width: bounds.width,
+          height: bounds.height,
           loadedRenderer,
         });
         console.log("DESKTOP_MATE_SMOKE_OK");
