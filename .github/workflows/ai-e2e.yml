@@ -7,10 +7,22 @@ jobs:
   real-provider:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
+          package-manager-cache: false
+      - name: Validate real-provider configuration
+        env:
+          DESKTOP_MATE_AI_BASE_URL: ${{ secrets.DESKTOP_MATE_AI_BASE_URL }}
+          DESKTOP_MATE_AI_API_KEY: ${{ secrets.DESKTOP_MATE_AI_API_KEY }}
+          DESKTOP_MATE_AI_MODEL: ${{ secrets.DESKTOP_MATE_AI_MODEL }}
+        run: |
+          set -euo pipefail
+          test -n "$DESKTOP_MATE_AI_BASE_URL" || { echo "Missing DESKTOP_MATE_AI_BASE_URL repository secret."; exit 1; }
+          test -n "$DESKTOP_MATE_AI_API_KEY" || { echo "Missing DESKTOP_MATE_AI_API_KEY repository secret."; exit 1; }
+          test -n "$DESKTOP_MATE_AI_MODEL" || { echo "Missing DESKTOP_MATE_AI_MODEL repository secret."; exit 1; }
+          echo "Real AI provider configuration is present (secret values are not printed)."
       - run: npm install
       - name: Run real-provider AI E2E
         env:
