@@ -12,6 +12,7 @@
     "test": "node scripts/run-tests.mjs",
     "validate:avatar": "node scripts/validate-avatar-asset.mjs",
     "validate:packaged-assets": "node scripts/validate-packaged-assets.mjs",
+    "qa:ai": "node --import tsx scripts/ai-provider-e2e.ts",
     "start": "electron .",
     "dev": "electron .",
     "perf": "node scripts/perf-check.mjs",
@@ -31,7 +32,8 @@
     "electron-builder": "^26.15.3",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
-    "vite": "^7.0.6"
+    "vite": "^7.0.6",
+    "electron-builder": "^26.15.3"
   },
   "build": {
     "appId": "com.desktopmate.companion",
