@@ -30,7 +30,9 @@ function parseToolCalls(text: string): ParsedToolCall[] {
       calls.push({
         toolId: parsed.toolId.trim(),
         input: parsed.input,
-        confirmed: parsed.confirmed === true,
+        // Model output is never a proof of user consent. Confirmation is a
+        // renderer-side user action and must not cross the AI trust boundary.
+        confirmed: false,
       });
     } catch {
       // Malformed model output is treated as normal text and is never executed.
