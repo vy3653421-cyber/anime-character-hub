@@ -1,0 +1,44 @@
+name: Desktop Mate Avatar Asset
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "public/assets/avatar/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version
+
+      - name: Generate avatar
+        run: blender --background --python tools/blender/build_desktop_mate.py
+
+      - name: Verify generated files
+        run: |
+          test -s public/assets/avatar/avatar.glb
+          test -s public/assets/avatar/desktop_mate_character.blend
+          ls -lh public/assets/avatar/
+
+      - name: Commit generated asset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/avatar/avatar.glb public/assets/avatar/desktop_mate_character.blend
+          if git diff --cached --quiet; then
+            echo "No avatar asset changes."
+          else
+            git commit -m "Generate Desktop Mate avatar asset"
+            git push
+          fi
