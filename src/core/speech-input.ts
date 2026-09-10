@@ -1,20 +1,15 @@
-export interface SpeechInputResult {
+export interface SpeechResult {
   transcript: string;
   confidence?: number;
   isFinal: boolean;
 }
 
-export interface SpeechInputStatus {
-  listening: boolean;
-  supported: boolean;
-  error?: string;
-}
-
 export interface SpeechInput {
-  start(): Promise<void>;
+  readonly supported: boolean;
+  start(): void;
   stop(): void;
-  status(): SpeechInputStatus;
-  onResult(listener: (result: SpeechInputResult) => void): () => void;
+  isListening(): boolean;
+  onResult(listener: (result: SpeechResult) => void): () => void;
   onError(listener: (error: Error) => void): () => void;
 }
 
@@ -45,56 +40,64 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
+function resolveConstructor(): SpeechRecognitionConstructor | undefined {
+  const scope = globalThis as typeof globalThis & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return scope.SpeechRecognition ?? scope.webkitSpeechRecognition;
+}
+
 export class BrowserSpeechInput implements SpeechInput {
+  readonly supported: boolean;
   private readonly recognition?: SpeechRecognitionLike;
   private listening = false;
-  private lastError: string | undefined;
-  private readonly resultListeners = new Set<(result: SpeechInputResult) => void>();
+  private readonly resultListeners = new Set<(result: SpeechResult) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
 
-  constructor(lang = "en-US", factory?: SpeechRecognitionConstructor) {
-    const root = globalThis as typeof globalThis & {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-    const Recognition = factory ?? root.SpeechRecognition ?? root.webkitSpeechRecognition;
-    if (!Recognition) return;
+  constructor(language = "en-IN") {
+    const Constructor = resolveConstructor();
+    this.supported = Boolean(Constructor);
+    if (!Constructor) return;
 
-    this.recognition = new Recognition();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
-    this.recognition.lang = lang;
-    this.recognition.onresult = (event) => this.handleResult(event);
-    this.recognition.onerror = (event) => {
-      const message = typeof event === "object" && event !== null && "error" in event
-        ? String((event as { error: unknown }).error)
-        : "speech recognition error";
-      this.lastError = message;
-      this.errorListeners.forEach((listener) => listener(new Error(message)));
-    };
-    this.recognition.onend = () => {
+    const recognition = new Constructor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = language;
+    recognition.onresult = (event) => this.handleResult(event);
+    recognition.onerror = (event) => this.handleError(event);
+    recognition.onend = () => {
       this.listening = false;
     };
+    this.recognition = recognition;
   }
 
-  async start(): Promise<void> {
-    if (!this.recognition) throw new Error("Speech recognition is not supported by this runtime");
-    if (this.listening) return;
-    this.lastError = undefined;
-    this.recognition.start();
-    this.listening = true;
+  start(): void {
+    if (!this.recognition || this.listening) return;
+    try {
+      this.recognition.start();
+      this.listening = true;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   stop(): void {
-    this.recognition?.stop();
-    this.listening = false;
+    if (!this.recognition) return;
+    try {
+      this.recognition.stop();
+    } catch (error) {
+      this.handleError(error);
+    } finally {
+      this.listening = false;
+    }
   }
 
-  status(): SpeechInputStatus {
-    return { listening: this.listening, supported: Boolean(this.recognition), error: this.lastError };
+  isListening(): boolean {
+    return this.listening;
   }
 
-  onResult(listener: (result: SpeechInputResult) => void): () => void {
+  onResult(listener: (result: SpeechResult) => void): () => void {
     this.resultListeners.add(listener);
     return () => this.resultListeners.delete(listener);
   }
@@ -112,13 +115,26 @@ export class BrowserSpeechInput implements SpeechInput {
     for (const item of results) {
       if (!item || typeof item !== "object" || !("0" in item)) continue;
       const first = (item as SpeechRecognitionResultLike)[0];
-      if (!first || typeof first !== "object" || typeof first.transcript !== "string") continue;
+      if (!first || typeof first !== "object") continue;
+      const transcript = first.transcript;
+      if (typeof transcript !== "string") continue;
+      const confidence = first.confidence;
       const isFinal = Boolean((item as SpeechRecognitionResultLike).isFinal);
       this.resultListeners.forEach((listener) => listener({
-        transcript: first.transcript.trim(),
-        confidence: typeof first.confidence === "number" ? first.confidence : undefined,
+        transcript: transcript.trim(),
+        confidence: typeof confidence === "number" ? confidence : undefined,
         isFinal,
       }));
     }
+  }
+
+  private handleError(event: unknown): void {
+    const message = typeof event === "object" && event !== null && "error" in event
+      ? String((event as { error?: unknown }).error ?? "Speech recognition failed")
+      : event instanceof Error
+        ? event.message
+        : "Speech recognition failed";
+    this.errorListeners.forEach((listener) => listener(new Error(message)));
+    this.listening = false;
   }
 }
