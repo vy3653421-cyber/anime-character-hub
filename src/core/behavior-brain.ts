@@ -27,7 +27,7 @@ const clamp = (value: number) => Math.max(0, Math.min(100, value));
 
 export class BehaviorBrain {
   private lastSpokenAt = 0;
-  private lastEventAt = Date.now();
+  private lastEventAt = 0;
 
   constructor(private readonly config: BehaviorConfig = {
     autonomy: 50,
@@ -61,7 +61,8 @@ export class BehaviorBrain {
       return this.decision("sleeping", 0.35, "none", false, undefined, now);
     }
 
-    return now - previousEventAt >= this.config.idleAfterMs
+    const elapsed = previousEventAt === 0 ? 0 : Math.max(0, now - previousEventAt);
+    return elapsed >= this.config.idleAfterMs
       ? this.decision("sleeping", 0.3, "none", false, undefined, now)
       : this.decision("idle", 0.2, "environment", false, undefined, now);
   }
