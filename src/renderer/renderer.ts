@@ -210,15 +210,6 @@ const sendChat = async (text: string) => {
 
 const bridge = window.desktopMate;
 if (bridge) {
-  void bridge.getSettings().then((settings) => {
-    alwaysOnTopButton.textContent = `Always on top: ${settings.alwaysOnTop ? "on" : "off"}`;
-    voiceEnabledButton.textContent = `Voice: ${settings.voiceEnabled ? "on" : "off"}`;
-    microphoneButton.textContent = `Mic: ${settings.microphoneEnabled ? "on" : "off"}`;
-    renderCard("Settings", "Persistent", true);
-  }).catch((error) => console.warn("[Settings] unavailable", error));
-
-  void loadTools(bridge);
-
   speechInput.onResult((result) => {
     if (!result.isFinal) return;
     const transcript = result.transcript.trim();
@@ -231,6 +222,31 @@ if (bridge) {
     status.textContent = `Microphone error · ${error.message}`;
     microphoneButton.textContent = "Mic: error";
   });
+
+  void bridge.getSettings().then(async (settings) => {
+    alwaysOnTopButton.textContent = `Always on top: ${settings.alwaysOnTop ? "on" : "off"}`;
+    voiceEnabledButton.textContent = `Voice: ${settings.voiceEnabled ? "on" : "off"}`;
+    renderCard("Settings", "Persistent", true);
+
+    // A persisted microphone preference means "listen on launch". Keep the UI honest:
+    // only report Mic: on after the recognition engine actually starts.
+    if (settings.microphoneEnabled && speechInput.supported) {
+      try {
+        await speechInput.start();
+        microphoneButton.textContent = "Mic: on";
+        status.textContent = "Microphone listening · click Mic to stop";
+      } catch (error) {
+        await bridge.updateSettings({ microphoneEnabled: false });
+        microphoneButton.textContent = "Mic: unavailable";
+        status.textContent = error instanceof Error ? error.message : "Microphone unavailable";
+      }
+    } else {
+      microphoneButton.textContent = `Mic: ${settings.microphoneEnabled ? "unavailable" : "off"}`;
+      if (!settings.microphoneEnabled) status.textContent = "Microphone off";
+    }
+  }).catch((error) => console.warn("[Settings] unavailable", error));
+
+  void loadTools(bridge);
 
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
