@@ -22,7 +22,7 @@ class FakeExecutor {
   }
 }
 
-test("parses only valid bounded tool calls", () => {
+test("parses only valid bounded tool calls and never trusts model confirmation", () => {
   const text = [
     "before",
     '<tool_call>{"toolId":"notify","input":{"body":"hi"}}</tool_call>',
@@ -34,8 +34,11 @@ test("parses only valid bounded tool calls", () => {
   const calls = parseToolCalls(text);
   assert.equal(calls.length, 3);
   assert.equal(calls[0].toolId, "notify");
-  assert.equal(calls[1].confirmed, true);
+  assert.equal(calls[0].confirmed, false);
+  assert.equal(calls[1].toolId, "open-url");
+  assert.equal(calls[1].confirmed, false);
   assert.equal(calls[2].toolId, "read-clipboard");
+  assert.equal(calls[2].confirmed, false);
   assert.equal(stripToolCalls(text).includes("before"), true);
   assert.equal(stripToolCalls(text).includes("bad json"), false);
 });
@@ -52,6 +55,7 @@ test("executes requested tools and forces a final model turn", async () => {
 
   assert.equal(executor.requests.length, 1);
   assert.equal(executor.requests[0].toolId, "notify");
+  assert.equal(executor.requests[0].confirmed, false);
   assert.deepEqual(result.toolResults, [{ ok: true }]);
   assert.equal(result.text, "The notification was sent.");
 });
