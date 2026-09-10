@@ -5,7 +5,7 @@ import { AvatarRuntime } from "./avatar-runtime";
 import { AvatarVoiceController } from "./avatar-voice-controller";
 import { HumanVoicePlayback } from "./human-voice-playback";
 import { validateAvatar } from "./avatar-validator";
-import { resolveRecordedVoiceLine, validateVoiceManifest, type VoiceManifest } from "../core/voice-manifest";
+import { getVoiceAvailability, resolveRecordedVoiceLine, validateVoiceManifest, type VoiceManifest } from "../core/voice-manifest";
 import { BrowserSpeechInput } from "../core/speech-input";
 
 type DesktopMateSettings = {
@@ -56,6 +56,19 @@ const speechInput = new BrowserSpeechInput("en-IN");
 let avatarRoot: THREE.Object3D | undefined;
 let voiceManifest: VoiceManifest | undefined;
 
+const updateVoiceButton = (settings: DesktopMateSettings) => {
+  const availability = getVoiceAvailability(voiceManifest);
+  if (availability !== "ready") {
+    voiceEnabledButton.textContent = "Voice: unavailable";
+    voiceEnabledButton.title = availability === "not-installed"
+      ? "Install a licensed human-recorded voice pack to enable playback."
+      : "The voice pack contains no recordings.";
+    return;
+  }
+  voiceEnabledButton.textContent = `Voice: ${settings.voiceEnabled ? "on" : "off"}`;
+  voiceEnabledButton.title = "Playback uses only exact licensed human-recorded lines; no TTS is generated.";
+};
+
 renderer.setAnimationLoop(() => {
   const delta = clock.getDelta();
   avatarRuntime.update(delta);
@@ -89,8 +102,8 @@ const renderCard = (label: string, value: string, ready: boolean) => {
   const valueEl = document.createElement("div");
   valueEl.className = `value ${ready ? "ready" : "pending"}`;
   valueEl.textContent = value;
-  card.append(labelEl, valueEl);
   capabilities.appendChild(card);
+  card.append(labelEl, valueEl);
 };
 
 const renderMessage = (role: "user" | "assistant", text: string) => {
@@ -143,11 +156,17 @@ const loadVoiceManifest = async () => {
     const value: unknown = await response.json();
     if (!validateVoiceManifest(value)) throw new Error("manifest failed validation");
     voiceManifest = value;
-    renderCard("Voice manifest", `${value.displayName} · ${value.assets.length} recorded lines`, true);
+    const availability = getVoiceAvailability(voiceManifest);
+    renderCard("Voice manifest", availability === "ready" ? `${value.displayName} · ${value.assets.length} recorded lines` : "No recordings", availability === "ready");
+    const settings = await window.desktopMate?.getSettings();
+    if (settings) updateVoiceButton(settings);
   } catch (error) {
     voiceManifest = undefined;
-    const message = error instanceof Error ? error.message : "Unknown voice asset error";
-    renderCard("Voice manifest", `Not installed (${message})`, false);
+    renderCard("Voice manifest", "Human voice pack not installed", false);
+    if (window.desktopMate) {
+      const settings = await window.desktopMate.getSettings();
+      updateVoiceButton(settings);
+    }
   }
 };
 
@@ -196,7 +215,7 @@ const sendChat = async (text: string) => {
     const response = await bridge.chat(text.trim());
     renderMessage("assistant", response.text);
     const settings = await bridge.getSettings();
-    if (settings.voiceEnabled && voiceManifest) {
+    if (settings.voiceEnabled && getVoiceAvailability(voiceManifest) === "ready" && voiceManifest) {
       const recordedLine = resolveRecordedVoiceLine(voiceManifest, response.text);
       if (recordedLine) {
         try { await voiceController.play(recordedLine); }
@@ -225,11 +244,9 @@ if (bridge) {
 
   void bridge.getSettings().then(async (settings) => {
     alwaysOnTopButton.textContent = `Always on top: ${settings.alwaysOnTop ? "on" : "off"}`;
-    voiceEnabledButton.textContent = `Voice: ${settings.voiceEnabled ? "on" : "off"}`;
+    updateVoiceButton(settings);
     renderCard("Settings", "Persistent", true);
 
-    // A persisted microphone preference means "listen on launch". Keep the UI honest:
-    // only report Mic: on after the recognition engine actually starts.
     if (settings.microphoneEnabled && speechInput.supported) {
       try {
         await speechInput.start();
@@ -267,8 +284,13 @@ if (bridge) {
 
   voiceEnabledButton.addEventListener("click", async () => {
     const settings = await bridge.getSettings();
+    if (getVoiceAvailability(voiceManifest) !== "ready") {
+      status.textContent = "Voice unavailable · install a licensed human-recorded voice pack";
+      updateVoiceButton(settings);
+      return;
+    }
     const updated = await bridge.updateSettings({ voiceEnabled: !settings.voiceEnabled });
-    voiceEnabledButton.textContent = `Voice: ${updated.voiceEnabled ? "on" : "off"}`;
+    updateVoiceButton(updated);
     if (!updated.voiceEnabled) voiceController.stop();
   });
 
