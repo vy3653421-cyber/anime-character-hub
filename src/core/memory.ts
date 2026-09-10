@@ -39,20 +39,17 @@ export class MemoryStore {
     const queryTokens = new Set(tokenize(query));
     return this.list()
       .map((entry, index) => {
-        const content = entry.content.toLowerCase();
-        const haystack = `${content} ${entry.tags.join(" ")}`;
+        const haystack = `${entry.content} ${entry.tags.join(" ")}`.toLowerCase();
         const contentTokens = new Set(tokenize(haystack));
         const overlap = [...queryTokens].filter((token) => contentTokens.has(token)).length;
-        const exactContent = content === needle ? 1 : 0;
         const exactPhrase = haystack.includes(needle) ? 1 : 0;
-        return { entry, index, overlap, exactContent, exactPhrase };
+        return { entry, index, overlap, exactPhrase };
       })
       .filter(({ overlap }) => overlap > 0)
       .sort((a, b) =>
-        b.exactContent - a.exactContent ||
         b.exactPhrase - a.exactPhrase ||
         b.overlap - a.overlap ||
-        a.index - b.index,
+        b.index - a.index,
       )
       .map(({ entry }) => entry);
   }
