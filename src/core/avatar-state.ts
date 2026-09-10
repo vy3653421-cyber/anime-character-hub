@@ -6,6 +6,7 @@ export type AvatarState =
   | "thinking"
   | "happy"
   | "surprised"
+  | "concerned"
   | "sleeping";
 
 export interface AvatarPose {
