@@ -73,11 +73,13 @@ export class AssistantAgent {
     };
   }
 
-  async *streamResponse(userText: string, requestId = randomUUID()): AsyncIterable<ChatStreamChunk & { requestId: string }> {
+  async *streamResponse(userText: string, requestId = randomUUID(), signal?: AbortSignal): AsyncIterable<ChatStreamChunk & { requestId: string }> {
     const normalizedText = userText.trim();
     const messages = this.buildMessages(normalizedText);
+    if (signal?.aborted) throw new DOMException("The AI stream was cancelled", "AbortError");
     if (this.orchestrator || !this.provider.stream) {
       const response = await this.respond(normalizedText);
+      if (signal?.aborted) throw new DOMException("The AI stream was cancelled", "AbortError");
       yield { requestId, text: response.text, done: false, model: response.model, provider: response.provider };
       yield { requestId, text: "", done: true, model: response.model, provider: response.provider };
       return;
@@ -85,12 +87,14 @@ export class AssistantAgent {
     let text = "";
     let model = "";
     let provider = this.provider.id;
-    for await (const chunk of this.provider.stream({ messages })) {
+    for await (const chunk of this.provider.stream({ messages, signal })) {
+      if (signal?.aborted) throw new DOMException("The AI stream was cancelled", "AbortError");
       if (chunk.text) text += chunk.text;
       model = chunk.model ?? model;
       provider = chunk.provider ?? provider;
       yield { ...chunk, requestId };
     }
+    if (signal?.aborted) throw new DOMException("The AI stream was cancelled", "AbortError");
     this.history.push({ role: "user", content: normalizedText }, { role: "assistant", content: text });
     if (this.history.length > MAX_HISTORY_MESSAGES) this.history.splice(0, this.history.length - MAX_HISTORY_MESSAGES);
     if (!model) model = "unknown";

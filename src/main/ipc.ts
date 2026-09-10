@@ -12,7 +12,7 @@ import { DesktopToolRuntime, type DesktopToolRequest } from "./desktop-tools";
 export const IPC_CHANNELS = {
   getStatus: "mate:get-status", getCapabilities: "mate:get-capabilities", listMemories: "mate:list-memories", saveMemory: "mate:save-memory",
   searchMemories: "mate:search-memories", listTools: "mate:list-tools", executeTool: "mate:execute-tool", chat: "mate:chat",
-  chatStream: "mate:chat-stream", chatStreamChunk: "mate:chat-stream-chunk", resetSession: "mate:reset-session", getSettings: "mate:get-settings",
+  chatStream: "mate:chat-stream", cancelChatStream: "mate:cancel-chat-stream", chatStreamChunk: "mate:chat-stream-chunk", resetSession: "mate:reset-session", getSettings: "mate:get-settings",
   updateSettings: "mate:update-settings",
 } as const;
 
@@ -20,6 +20,7 @@ let memory: MemoryStore;
 let settings: CompanionSettingsStore;
 let tools: DesktopToolRuntime;
 let agent: AssistantAgent | undefined;
+const activeStreams = new Map<string, AbortController>();
 
 function createProvider(): AIProvider | undefined {
   const apiKey = process.env.DESKTOP_MATE_AI_API_KEY?.trim();
@@ -72,22 +73,40 @@ export function registerIpcHandlers(version: string): void {
     if (!agent) throw new Error("AI provider is not configured");
     if (typeof text !== "string" || !text.trim()) throw new Error("Chat text is required");
     const requestId = randomUUID();
+    const controller = new AbortController();
+    activeStreams.set(requestId, controller);
     setImmediate(() => {
       void (async () => {
         try {
-          for await (const chunk of agent!.streamResponse(text.trim(), requestId)) {
+          for await (const chunk of agent!.streamResponse(text.trim(), requestId, controller.signal)) {
             if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, chunk);
           }
         } catch (error) {
+          if (controller.signal.aborted) {
+            if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, { requestId, text: "", done: true, provider: "openai-compatible", cancelled: true });
+            return;
+          }
           const message = error instanceof Error ? error.message : "AI stream failed";
           if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, { requestId, text: `AI unavailable: ${message}`, done: true, provider: "openai-compatible" });
+        } finally {
+          activeStreams.delete(requestId);
         }
       })();
     });
     return { requestId };
   });
+  ipcMain.handle(IPC_CHANNELS.cancelChatStream, (_event, requestId: unknown) => {
+    if (typeof requestId !== "string" || !requestId.trim()) throw new Error("Stream request id is required");
+    const controller = activeStreams.get(requestId);
+    if (!controller) return { ok: false, reason: "Stream is no longer active" };
+    controller.abort();
+    activeStreams.delete(requestId);
+    return { ok: true };
+  });
   ipcMain.handle(IPC_CHANNELS.resetSession, () => {
     if (!agent) return { ok: false, reason: "AI provider is not configured" };
+    for (const controller of activeStreams.values()) controller.abort();
+    activeStreams.clear();
     agent.resetSession(); return { ok: true };
   });
   ipcMain.handle(IPC_CHANNELS.getSettings, async () => { await settings.ready(); return settings.get(); });

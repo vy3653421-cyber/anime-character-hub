@@ -1,7 +1,8 @@
-type StreamChunk = { requestId: string; text: string; done?: boolean; model?: string; provider?: string };
+type StreamChunk = { requestId: string; text: string; done?: boolean; model?: string; provider?: string; cancelled?: boolean };
 
 type StreamBridge = {
   chatStream(text: string): Promise<{ requestId: string }>;
+  cancelChatStream(requestId: string): Promise<{ ok: boolean; reason?: string }>;
   onChatStream(listener: (chunk: StreamChunk) => void): () => void;
 };
 
@@ -18,6 +19,12 @@ const installChatStreaming = () => {
   let activeRequestId: string | undefined;
   let assistantBubble: HTMLDivElement | undefined;
   let accumulated = "";
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancel";
+  cancelButton.hidden = true;
+  cancelButton.className = "secondary";
+  form.appendChild(cancelButton);
 
   const appendMessage = (role: "user" | "assistant", text: string) => {
     const message = document.createElement("div");
@@ -32,6 +39,14 @@ const installChatStreaming = () => {
     input.disabled = busy;
     const sendButton = form.querySelector<HTMLButtonElement>("button[type=submit]");
     if (sendButton) sendButton.disabled = busy;
+    cancelButton.hidden = !busy;
+  };
+
+  const finish = (message: string) => {
+    activeRequestId = undefined;
+    setBusy(false);
+    status.textContent = message;
+    input.focus();
   };
 
   bridge.onChatStream((chunk) => {
@@ -42,12 +57,14 @@ const installChatStreaming = () => {
       assistantBubble.textContent = accumulated;
       log.scrollTop = log.scrollHeight;
     }
-    if (chunk.done) {
-      activeRequestId = undefined;
-      setBusy(false);
-      status.textContent = "AI response complete";
-      input.focus();
-    }
+    if (chunk.done) finish(chunk.cancelled ? "AI response cancelled" : "AI response complete");
+  });
+
+  cancelButton.addEventListener("click", () => {
+    const requestId = activeRequestId;
+    if (!requestId) return;
+    cancelButton.disabled = true;
+    void bridge.cancelChatStream(requestId).catch(() => undefined);
   });
 
   form.addEventListener("submit", async (event) => {
@@ -60,6 +77,7 @@ const installChatStreaming = () => {
     appendMessage("user", text);
     input.value = "";
     setBusy(true);
+    cancelButton.disabled = false;
     assistantBubble = undefined;
     accumulated = "";
     status.textContent = "AI is responding…";

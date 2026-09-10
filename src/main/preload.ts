@@ -10,7 +10,7 @@ export interface CompanionSettings {
   toolConfirmations: boolean;
 }
 
-export interface StreamChunk { requestId: string; text: string; done?: boolean; model?: string; provider?: string; }
+export interface StreamChunk { requestId: string; text: string; done?: boolean; model?: string; provider?: string; cancelled?: boolean; }
 
 export interface DesktopMateAPI {
   getStatus(): Promise<{ ready: boolean; version: string }>;
@@ -26,6 +26,7 @@ export interface DesktopMateAPI {
   executeTool(request: { toolId: string; input?: unknown; confirmed?: boolean }): Promise<{ ok: boolean; requiresConfirmation?: boolean; reason?: string; data?: unknown }>;
   chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
   chatStream(text: string): Promise<{ requestId: string }>;
+  cancelChatStream(requestId: string): Promise<{ ok: boolean; reason?: string }>;
   onChatStream(listener: (chunk: StreamChunk) => void): () => void;
   resetSession(): Promise<{ ok: boolean; reason?: string }>;
   getSettings(): Promise<CompanionSettings>;
@@ -42,6 +43,7 @@ const api: DesktopMateAPI = {
   executeTool: (request) => ipcRenderer.invoke("mate:execute-tool", request),
   chat: (text) => ipcRenderer.invoke("mate:chat", text),
   chatStream: (text) => ipcRenderer.invoke("mate:chat-stream", text),
+  cancelChatStream: (requestId) => ipcRenderer.invoke("mate:cancel-chat-stream", requestId),
   onChatStream: (listener) => {
     const wrapped = (_event: Electron.IpcRendererEvent, chunk: StreamChunk) => listener(chunk);
     ipcRenderer.on("mate:chat-stream-chunk", wrapped);
