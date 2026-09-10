@@ -1,20 +1,27 @@
 import { app, BrowserWindow } from "electron";
+import path from "node:path";
 import { registerIpcHandlers } from "./ipc";
 import { createMainWindow } from "./window";
 import { createTray } from "./tray";
-import path from "node:path";
 
 const rendererEntry = () => `${__dirname}/../renderer/index.html`;
 let mainWindow: BrowserWindow | undefined;
+let quitting = false;
 
 const openMainWindow = () => {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    const statePath = path.join(app.getPath("userData"), "window-state.json");
-    mainWindow = createMainWindow(statePath);
+    const windowStatePath = path.join(app.getPath("userData"), "window-state.json");
+    mainWindow = createMainWindow(windowStatePath);
     createTray(mainWindow);
+    mainWindow.on("close", (event) => {
+      if (quitting || process.env.DESKTOP_MATE_SMOKE === "1") return;
+      event.preventDefault();
+      mainWindow?.hide();
+    });
     mainWindow.webContents.once("did-finish-load", () => {
       if (process.env.DESKTOP_MATE_SMOKE === "1") {
         console.log("DESKTOP_MATE_SMOKE_OK");
+        quitting = true;
         app.quit();
       }
     });
@@ -28,6 +35,7 @@ const openMainWindow = () => {
 
 app.whenReady().then(() => {
   registerIpcHandlers(app.getVersion());
+  app.on("before-quit", () => { quitting = true; });
   openMainWindow();
   app.on("activate", openMainWindow);
 }).catch((error) => {
