@@ -17,6 +17,7 @@ export const IPC_CHANNELS = {
   listTools: "mate:list-tools",
   executeTool: "mate:execute-tool",
   chat: "mate:chat",
+  resetSession: "mate:reset-session",
   getSettings: "mate:get-settings",
   updateSettings: "mate:update-settings",
 } as const;
@@ -96,6 +97,12 @@ export function registerIpcHandlers(version: string): void {
     if (!agent) throw new Error("AI provider is not configured");
     if (typeof text !== "string" || !text.trim()) throw new Error("Chat text is required");
     return agent.respond(text.trim());
+  });
+
+  ipcMain.handle(IPC_CHANNELS.resetSession, () => {
+    if (!agent) return { ok: false, reason: "AI provider is not configured" };
+    agent.resetSession();
+    return { ok: true };
   });
 
   ipcMain.handle(IPC_CHANNELS.getSettings, async () => {
