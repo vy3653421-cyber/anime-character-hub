@@ -26,7 +26,7 @@ const patterns: Record<AvatarExpressionName, RegExp[]> = {
   smile: [/^smile$/i, /smile/i, /mouth.?smile/i, /happy/i],
   blink: [/^blink$/i, /blink/i, /eye.?close/i],
   mouthOpen: [/^mouth.?open$/i, /mouth.?open/i, /jaw.?open/i],
-  browUp: [/^brow.?up$/i, /brow/i.test ? /brow.?raise/i : /brow.?raise/i, /eyebrow.?up/i],
+  browUp: [/^brow.?up$/i, /brow.?raise/i, /eyebrow.?up/i],
   browDown: [/^brow.?down$/i, /brow.?lower/i, /eyebrow.?down/i],
   mouthFrown: [/frown/i, /sad/i, /mouth.?down/i],
 };
@@ -61,10 +61,7 @@ export class AvatarExpressionController {
     const mapped: Partial<Record<AvatarExpressionName, number>> = {};
     for (const binding of this.bindings) mapped[binding.name] = (mapped[binding.name] ?? 0) + 1;
 
-    return {
-      morphTargets: this.bindings.length,
-      mapped,
-    };
+    return { morphTargets: this.bindings.length, mapped };
   }
 
   setExpression(expressions: AvatarExpressionSet): void {
