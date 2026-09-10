@@ -1,5 +1,6 @@
 import { BrowserWindow, screen } from "electron";
 import { readFile, rename, writeFile } from "node:fs/promises";
+import { renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 interface WindowState {
@@ -38,14 +39,31 @@ function stateIsVisible(state: WindowState): boolean {
   });
 }
 
-async function persistWindowState(filePath: string, win: BrowserWindow): Promise<void> {
-  if (win.isDestroyed() || win.isMinimized()) return;
+function getWindowState(win: BrowserWindow): WindowState | undefined {
+  if (win.isDestroyed() || win.isMinimized()) return undefined;
   const [x, y] = win.getPosition();
   const [width, height] = win.getSize();
-  const state: WindowState = { x, y, width, height };
+  return { x, y, width, height };
+}
+
+async function persistWindowState(filePath: string, win: BrowserWindow): Promise<void> {
+  const state = getWindowState(win);
+  if (!state) return;
   const tempPath = `${filePath}.tmp`;
   await writeFile(tempPath, JSON.stringify(state), "utf8");
   await rename(tempPath, filePath);
+}
+
+function persistWindowStateSync(filePath: string, win: BrowserWindow): void {
+  const state = getWindowState(win);
+  if (!state) return;
+  const tempPath = `${filePath}.tmp`;
+  try {
+    writeFileSync(tempPath, JSON.stringify(state), "utf8");
+    renameSync(tempPath, filePath);
+  } catch (error) {
+    console.error("Desktop Mate window-state save failed", error);
+  }
 }
 
 export function createMainWindow(statePath?: string): BrowserWindow {
@@ -85,9 +103,10 @@ export function createMainWindow(statePath?: string): BrowserWindow {
     };
     win.on("move", save);
     win.on("resize", save);
-    win.on("closed", () => {
+    win.on("close", () => {
       if (saveTimer) clearTimeout(saveTimer);
       saveTimer = undefined;
+      persistWindowStateSync(statePath, win);
     });
   }
 
