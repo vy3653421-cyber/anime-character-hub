@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { registerIpcHandlers } from "./ipc";
 import { createMainWindow } from "./window";
 import { createTray } from "./tray";
@@ -41,10 +41,9 @@ const openMainWindow = () => {
         try {
           const screenshotDir = path.join(process.cwd(), "qa-artifacts");
           mkdirSync(screenshotDir, { recursive: true });
-          const image = await mainWindow.webContents.capturePage();
-          await image.toPNG();
           const screenshotPath = path.join(screenshotDir, "desktop-mate-runtime.png");
-          require("node:fs").writeFileSync(screenshotPath, image.toPNG());
+          const image = await mainWindow.webContents.capturePage();
+          writeFileSync(screenshotPath, image.toPNG());
           console.log("DESKTOP_MATE_VISUAL_QA_ARTIFACT", screenshotPath);
         } catch (error) {
           console.error("DESKTOP_MATE_VISUAL_QA_CAPTURE_FAILED", error);
