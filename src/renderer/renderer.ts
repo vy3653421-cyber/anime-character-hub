@@ -17,9 +17,11 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const clock = new THREE.Clock();
 let mixer: THREE.AnimationMixer | undefined;
 let avatarLoaded = false;
+let activeAction: THREE.AnimationAction | undefined;
 
 renderer.setAnimationLoop(() => {
-  if (mixer) mixer.update(clock.getDelta());
+  const delta = clock.getDelta();
+  if (mixer) mixer.update(delta);
   renderer.render(scene, camera);
 });
 mount.appendChild(renderer.domElement);
@@ -65,6 +67,16 @@ const inspectAvatar = (gltf: GLTF) => {
   return { clips, skinnedMeshes, morphTargets };
 };
 
+const playMatchingClip = (clips: THREE.AnimationClip[], pattern: RegExp) => {
+  const clip = clips.find((candidate) => pattern.test(candidate.name));
+  if (!clip || !mixer) return false;
+  const nextAction = mixer.clipAction(clip);
+  nextAction.reset().fadeIn(0.2).play();
+  activeAction?.fadeOut(0.2);
+  activeAction = nextAction;
+  return true;
+};
+
 const loadAvatar = async () => {
   try {
     const gltf = await new GLTFLoader().loadAsync("/assets/avatar/avatar.glb");
@@ -75,8 +87,7 @@ const loadAvatar = async () => {
     gltf.scene.position.y = -1.05;
     scene.add(gltf.scene);
     mixer = new THREE.AnimationMixer(gltf.scene);
-    const idle = gltf.animations.find((clip) => /idle|breath/i.test(clip.name));
-    if (idle) mixer.clipAction(idle).play();
+    playMatchingClip(gltf.animations, /idle|breath/i);
     avatarLoaded = true;
     status.textContent = `3D avatar loaded · ${report.clips.length} animation clips · ${report.morphTargets} morph targets`;
     renderCard("3D avatar", "Ready", true);
@@ -98,6 +109,8 @@ void loadAvatar();
 
 window.addEventListener("beforeunload", () => {
   renderer.setAnimationLoop(null);
+  mixer?.stopAllAction();
   mixer = undefined;
-  if (avatarLoaded) renderer.dispose();
+  activeAction = undefined;
+  renderer.dispose();
 });
