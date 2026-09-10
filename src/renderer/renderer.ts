@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const mount = document.querySelector<HTMLDivElement>("#avatar");
 const status = document.querySelector<HTMLDivElement>("#status");
@@ -13,15 +14,15 @@ camera.position.set(0, 1.35, 4.2);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+const clock = new THREE.Clock();
+let mixer: THREE.AnimationMixer | undefined;
+let avatarLoaded = false;
+
 renderer.setAnimationLoop(() => {
   if (mixer) mixer.update(clock.getDelta());
   renderer.render(scene, camera);
 });
 mount.appendChild(renderer.domElement);
-
-const clock = new THREE.Clock();
-let mixer: THREE.AnimationMixer | undefined;
-let avatarLoaded = false;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x202030, 2.1));
 const key = new THREE.DirectionalLight(0xffffff, 2.4);
@@ -51,11 +52,11 @@ const renderCard = (label: string, value: string, ready: boolean) => {
   capabilities.appendChild(card);
 };
 
-const inspectAvatar = (gltf: THREE.Object3DEventMap extends never ? never : any) => {
-  const clips: string[] = gltf.animations.map((clip: THREE.AnimationClip) => clip.name).filter(Boolean);
+const inspectAvatar = (gltf: GLTF) => {
+  const clips = gltf.animations.map((clip) => clip.name).filter(Boolean);
   let skinnedMeshes = 0;
   let morphTargets = 0;
-  gltf.scene.traverse((object: THREE.Object3D) => {
+  gltf.scene.traverse((object) => {
     if (object instanceof THREE.SkinnedMesh) {
       skinnedMeshes += 1;
       if (object.morphTargetDictionary) morphTargets += Object.keys(object.morphTargetDictionary).length;
@@ -74,7 +75,7 @@ const loadAvatar = async () => {
     gltf.scene.position.y = -1.05;
     scene.add(gltf.scene);
     mixer = new THREE.AnimationMixer(gltf.scene);
-    const idle = gltf.animations.find((clip: THREE.AnimationClip) => /idle|breath/i.test(clip.name));
+    const idle = gltf.animations.find((clip) => /idle|breath/i.test(clip.name));
     if (idle) mixer.clipAction(idle).play();
     avatarLoaded = true;
     status.textContent = `3D avatar loaded · ${report.clips.length} animation clips · ${report.morphTargets} morph targets`;
@@ -98,6 +99,5 @@ void loadAvatar();
 window.addEventListener("beforeunload", () => {
   renderer.setAnimationLoop(null);
   mixer = undefined;
-  if (!avatarLoaded) return;
-  renderer.dispose();
+  if (avatarLoaded) renderer.dispose();
 });
