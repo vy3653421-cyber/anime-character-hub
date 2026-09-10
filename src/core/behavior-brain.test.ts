@@ -23,3 +23,10 @@ test("speech cooldown suppresses repeated proactive speech", () => {
   assert.equal(brain.decide({ type: "task-completed" }, 25_000).shouldSpeak, false);
   assert.equal(brain.decide({ type: "task-completed" }, 31_000).shouldSpeak, true);
 });
+
+test("timer uses the elapsed time since the previous event", () => {
+  const brain = new BehaviorBrain({ autonomy: 50, speechCooldownMs: 1_000, idleAfterMs: 10_000 });
+  assert.equal(brain.decide({ type: "timer" }, 1_000).avatarState, "idle");
+  assert.equal(brain.decide({ type: "timer" }, 9_000).avatarState, "idle");
+  assert.equal(brain.decide({ type: "timer" }, 19_001).avatarState, "sleeping");
+});
