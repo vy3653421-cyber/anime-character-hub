@@ -21,13 +21,21 @@ const openMainWindow = () => {
     });
     mainWindow.webContents.once("did-finish-load", async () => {
       if (process.env.DESKTOP_MATE_SMOKE === "1") {
-        const bounds = mainWindow?.getBounds();
-        const loadedUrl = mainWindow?.webContents.getURL() ?? "";
-        const visible = mainWindow?.isVisible() === true;
-        const validBounds = Boolean(bounds && bounds.width >= 320 && bounds.height >= 240);
+        const window = mainWindow;
+        if (!window || window.isDestroyed()) {
+          console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", { reason: "main window unavailable" });
+          quitting = true;
+          app.exit(1);
+          return;
+        }
+
+        const bounds = window.getBounds();
+        const loadedUrl = window.webContents.getURL();
+        const visible = window.isVisible();
+        const validBounds = bounds.width >= 320 && bounds.height >= 240;
         const loadedRenderer = loadedUrl.startsWith("file:") && loadedUrl.endsWith("index.html");
 
-        if (!visible || !validBounds || !loadedRenderer || !mainWindow) {
+        if (!visible || !validBounds || !loadedRenderer) {
           console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", {
             visible,
             bounds,
@@ -42,7 +50,7 @@ const openMainWindow = () => {
           const screenshotDir = path.join(process.cwd(), "qa-artifacts");
           mkdirSync(screenshotDir, { recursive: true });
           const screenshotPath = path.join(screenshotDir, "desktop-mate-runtime.png");
-          const image = await mainWindow.webContents.capturePage();
+          const image = await window.webContents.capturePage();
           writeFileSync(screenshotPath, image.toPNG());
           console.log("DESKTOP_MATE_VISUAL_QA_ARTIFACT", screenshotPath);
         } catch (error) {
