@@ -8,7 +8,7 @@
     "build": "npm run build:main && npm run build:renderer",
     "build:main": "tsc -p tsconfig.json",
     "build:renderer": "vite build --config vite.config.ts",
-    "test": "node --test --import tsx \"src/**/*.test.ts\"",
+    "test": "node --test --import tsx src",
     "start": "electron .",
     "dev": "electron ."
   },
