@@ -2,13 +2,15 @@ import { app, BrowserWindow } from "electron";
 import { registerIpcHandlers } from "./ipc";
 import { createMainWindow } from "./window";
 import { createTray } from "./tray";
+import path from "node:path";
 
 const rendererEntry = () => `${__dirname}/../renderer/index.html`;
 let mainWindow: BrowserWindow | undefined;
 
 const openMainWindow = () => {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    mainWindow = createMainWindow();
+    const statePath = path.join(app.getPath("userData"), "window-state.json");
+    mainWindow = createMainWindow(statePath);
     createTray(mainWindow);
     mainWindow.webContents.once("did-finish-load", () => {
       if (process.env.DESKTOP_MATE_SMOKE === "1") {
