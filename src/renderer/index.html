@@ -79,6 +79,24 @@
         </div>
       </section>
     </main>
+    <script>
+      (() => {
+        const showRuntimeError = (message) => {
+          const status = document.getElementById("status");
+          if (status) status.textContent = `Runtime error · ${message}`;
+        };
+        window.addEventListener("error", (event) => {
+          const message = event.error instanceof Error ? event.error.message : event.message || "Unknown renderer error";
+          console.error("[Desktop Mate] Renderer error", event.error || event.message);
+          showRuntimeError(message);
+        });
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason instanceof Error ? event.reason.message : String(event.reason ?? "Unknown promise rejection");
+          console.error("[Desktop Mate] Unhandled renderer rejection", event.reason);
+          showRuntimeError(reason);
+        });
+      })();
+    </script>
     <script type="module" src="./chat-stream-ui.ts"></script>
     <script type="module" src="./renderer.ts"></script>
   </body>
