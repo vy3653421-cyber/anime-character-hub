@@ -4,6 +4,7 @@ import type { AIProvider } from "../core/ai-provider";
 import { OpenAICompatibleProvider } from "../core/http-ai-provider";
 import { JsonFileMemoryPersistence } from "../core/memory-store";
 import { MemoryStore } from "../core/memory";
+import { CompanionSettingsStore, type CompanionSettings } from "../core/settings";
 import { DesktopToolRuntime, type DesktopToolRequest } from "./desktop-tools";
 
 export const IPC_CHANNELS = {
@@ -15,11 +16,12 @@ export const IPC_CHANNELS = {
   listTools: "mate:list-tools",
   executeTool: "mate:execute-tool",
   chat: "mate:chat",
+  getSettings: "mate:get-settings",
+  updateSettings: "mate:update-settings",
 } as const;
 
-const memory = new MemoryStore(
-  new JsonFileMemoryPersistence(`${app.getPath("userData")}/memory.json`),
-);
+const memory = new MemoryStore(new JsonFileMemoryPersistence(`${app.getPath("userData")}/memory.json`));
+const settings = new CompanionSettingsStore(`${app.getPath("userData")}/settings.json`);
 const tools = new DesktopToolRuntime();
 
 function createProvider(): AIProvider | undefined {
@@ -41,7 +43,7 @@ const agent = provider
 
 export function registerIpcHandlers(version: string): void {
   ipcMain.handle(IPC_CHANNELS.getStatus, async () => {
-    await memory.ready();
+    await Promise.all([memory.ready(), settings.ready()]);
     return { ready: true, version };
   });
 
@@ -53,6 +55,7 @@ export function registerIpcHandlers(version: string): void {
     voice: { enabled: false },
     desktopTools: { enabled: true, reason: "permission-gated allowlisted bridge" },
     memory: { enabled: true, durable: true },
+    settings: { enabled: true, durable: true },
   }));
 
   ipcMain.handle(IPC_CHANNELS.listMemories, async () => {
@@ -82,5 +85,11 @@ export function registerIpcHandlers(version: string): void {
     if (!agent) throw new Error("AI provider is not configured");
     if (typeof text !== "string" || !text.trim()) throw new Error("Chat text is required");
     return agent.respond(text.trim());
+  });
+
+  ipcMain.handle(IPC_CHANNELS.getSettings, () => settings.get());
+  ipcMain.handle(IPC_CHANNELS.updateSettings, async (_event, patch: unknown) => {
+    if (typeof patch !== "object" || patch === null) throw new Error("Invalid settings patch");
+    return settings.update(patch as Partial<CompanionSettings>);
   });
 }
