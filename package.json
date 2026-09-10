@@ -6,10 +6,15 @@
   "main": "dist/main/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test --import tsx \"src/**/*.test.ts\""
+    "test": "node --test --import tsx \"src/**/*.test.ts\"",
+    "start": "electron .",
+    "dev": "electron ."
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "electron": "^37.2.6"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
