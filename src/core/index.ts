@@ -5,4 +5,5 @@ export * from "./behavior-brain";
 export * from "./contracts";
 export * from "./memory";
 export * from "./permission-policy";
+export * from "./response-plan";
 export * from "./tool-registry";
