@@ -1,4 +1,5 @@
 import { access } from "node:fs/promises";
+import path from "node:path";
 
 export interface AssetCapability {
   enabled: boolean;
@@ -16,9 +17,9 @@ export interface CapabilitySnapshot {
   settings: AssetCapability & { durable: boolean };
 }
 
-async function fileExists(path: string): Promise<boolean> {
+async function fileExists(filePath: string): Promise<boolean> {
   try {
-    await access(path);
+    await access(filePath);
     return true;
   } catch {
     return false;
@@ -31,8 +32,9 @@ export async function inspectCapabilities(options: {
   memoryReady: boolean;
   settingsReady: boolean;
 }): Promise<CapabilitySnapshot> {
-  const avatarPath = `${options.appPath}/public/assets/avatar/avatar.glb`;
-  const voiceManifestPath = `${options.appPath}/public/assets/voice/manifest.json`;
+  const rendererPath = path.join(options.appPath, "dist", "renderer");
+  const avatarPath = path.join(rendererPath, "assets", "avatar", "avatar.glb");
+  const voiceManifestPath = path.join(rendererPath, "assets", "voice", "manifest.json");
   const [avatarInstalled, voiceManifestInstalled] = await Promise.all([
     fileExists(avatarPath),
     fileExists(voiceManifestPath),
