@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desktop Mate</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 100%; height: 100%; background: transparent; }
+      body { display: grid; place-items: center; overflow: hidden; }
+      .shell { width: min(92vw, 480px); padding: 28px; border: 1px solid rgba(255,255,255,.14); border-radius: 28px; background: rgba(16,16,22,.88); backdrop-filter: blur(24px); box-shadow: 0 24px 80px rgba(0,0,0,.45); }
+      .badge { display: inline-block; padding: 6px 10px; border-radius: 999px; background: rgba(120,170,255,.12); color: #bcd4ff; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+      h1 { margin: 14px 0 8px; font-size: 30px; }
+      p { margin: 0; color: #aaaab4; line-height: 1.55; }
+      #status { margin-top: 18px; font-size: 13px; color: #d7d7df; }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <span class="badge">Runtime foundation</span>
+      <h1>Desktop Mate</h1>
+      <p>The secure desktop shell is online. The real avatar, AI, tools, memory and interaction layers plug into this runtime.</p>
+      <div id="status">Checking runtime…</div>
+    </main>
+    <script>
+      window.desktopMate?.getStatus().then((status) => {
+        document.getElementById("status").textContent = status.ready
+          ? `Runtime ready · v${status.version}`
+          : "Runtime unavailable";
+      }).catch(() => {
+        document.getElementById("status").textContent = "IPC unavailable";
+      });
+    </script>
+  </body>
+</html>
