@@ -13,6 +13,7 @@
     "validate:avatar": "node scripts/validate-avatar-asset.mjs",
     "validate:packaged-assets": "node scripts/validate-packaged-assets.mjs",
     "qa:ai": "node --import tsx scripts/ai-provider-e2e.ts",
+    "release:check": "node scripts/release-readiness.mjs",
     "start": "electron .",
     "dev": "electron .",
     "perf": "node scripts/perf-check.mjs",
