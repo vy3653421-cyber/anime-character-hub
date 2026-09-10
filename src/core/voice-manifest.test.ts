@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { selectVoiceAsset, validateVoiceManifest } from "./voice-manifest";
+import { selectVoiceAsset, validateVoiceManifest, type VoiceManifest } from "./voice-manifest";
 
-const manifest = {
+const manifest: VoiceManifest = {
   version: 1,
   voiceId: "companion-en-01",
   displayName: "Companion Voice",
