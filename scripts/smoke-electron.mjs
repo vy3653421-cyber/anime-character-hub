@@ -40,7 +40,10 @@ child.on("error", (error) => {
 
 child.on("exit", (code, signal) => {
   clearTimeout(timeout);
-  if (code === 0 && output.includes("DESKTOP_MATE_SMOKE_OK")) process.exit(0);
-  console.error(`Electron startup smoke failed: code=${code ?? "null"} signal=${signal ?? "none"}`);
+  const runtimeQaPassed = output.includes("DESKTOP_MATE_RUNTIME_QA_OK");
+  const smokePassed = output.includes("DESKTOP_MATE_SMOKE_OK");
+  if (code === 0 && runtimeQaPassed && smokePassed) process.exit(0);
+  console.error(`Electron runtime QA failed: code=${code ?? "null"} signal=${signal ?? "none"}`);
+  console.error(`Runtime QA marker: ${runtimeQaPassed ? "present" : "missing"}; smoke marker: ${smokePassed ? "present" : "missing"}`);
   process.exit(1);
 });
