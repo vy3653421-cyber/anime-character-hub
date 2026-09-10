@@ -38,3 +38,27 @@ jobs:
         run: npm run package:dir
       - name: Electron startup smoke test
         run: xvfb-run -a node scripts/smoke-electron.mjs
+
+  cross-platform-package:
+    name: Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - name: Build and package application directory
+        run: npm run package:dir
+      - name: Upload packaged application
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mate-${{ matrix.os }}
+          path: |
+            dist/*-unpacked
+            dist/*
+          if-no-files-found: error
