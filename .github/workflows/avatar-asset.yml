@@ -17,13 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Blender
+      - name: Install Blender and exporter dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version
+          python3 -c "import numpy; print('system numpy', numpy.__version__)"
 
       - name: Generate avatar
+        env:
+          PYTHONPATH: /usr/lib/python3/dist-packages
         run: blender --background --python tools/blender/build_desktop_mate.py
 
       - name: Verify generated files
