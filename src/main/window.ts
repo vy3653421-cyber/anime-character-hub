@@ -69,6 +69,7 @@ function persistWindowStateSync(filePath: string, win: BrowserWindow): void {
 export function createMainWindow(statePath?: string): BrowserWindow {
   const fallback = { ...DEFAULT_STATE };
   const savedStatePromise = statePath ? loadWindowState(statePath) : Promise.resolve(fallback);
+  let userChangedWindow = false;
 
   const win = new BrowserWindow({
     x: fallback.x,
@@ -95,6 +96,7 @@ export function createMainWindow(statePath?: string): BrowserWindow {
   if (statePath) {
     let saveTimer: NodeJS.Timeout | undefined;
     const save = () => {
+      userChangedWindow = true;
       if (saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
         saveTimer = undefined;
@@ -111,7 +113,7 @@ export function createMainWindow(statePath?: string): BrowserWindow {
   }
 
   void savedStatePromise.then((state) => {
-    if (!win.isDestroyed() && stateIsVisible(state)) win.setBounds(state);
+    if (!win.isDestroyed() && !userChangedWindow && stateIsVisible(state)) win.setBounds(state);
   });
   return win;
 }
