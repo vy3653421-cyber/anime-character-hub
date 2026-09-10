@@ -10,6 +10,7 @@
     "build:main": "tsc -p tsconfig.json",
     "build:renderer": "vite build --config vite.config.ts",
     "test": "node scripts/run-tests.mjs",
+    "validate:avatar": "node scripts/validate-avatar-asset.mjs",
     "start": "electron .",
     "dev": "electron .",
     "perf": "node scripts/perf-check.mjs",
