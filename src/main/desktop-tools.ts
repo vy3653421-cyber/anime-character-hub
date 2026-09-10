@@ -1,5 +1,6 @@
 import { clipboard, Notification, shell } from "electron";
 import { ToolPermissionPolicy, createDefaultToolPolicy } from "../core/tool-permissions";
+import { resolveAllowedApp } from "./app-allowlist";
 
 export interface DesktopToolRequest {
   toolId: string;
@@ -62,8 +63,21 @@ export class DesktopToolRuntime {
         await shell.openExternal(value);
         return { ok: true };
       }
-      case "open-app":
-        return { ok: false, reason: "open-app is policy-defined but execution is intentionally disabled until an explicit app allowlist exists" };
+      case "open-app": {
+        const appId = typeof request.input === "object" && request.input !== null
+          ? (request.input as { appId?: unknown }).appId
+          : request.input;
+        const allowedApp = resolveAllowedApp(appId);
+        if (!allowedApp) {
+          return {
+            ok: false,
+            reason: "Unknown application. Choose an application from Desktop Mate's explicit allowlist.",
+          };
+        }
+        const error = await shell.openPath(allowedApp.path);
+        if (error) return { ok: false, reason: `Unable to open ${allowedApp.label}: ${error}` };
+        return { ok: true, data: { appId: allowedApp.id, label: allowedApp.label } };
+      }
       default:
         return { ok: false, reason: "Tool is not registered" };
     }
