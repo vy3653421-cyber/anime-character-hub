@@ -21,6 +21,7 @@ export interface DesktopMateAPI {
     reason?: string;
     data?: unknown;
   }>;
+  chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
 }
 
 const api: DesktopMateAPI = {
@@ -31,6 +32,7 @@ const api: DesktopMateAPI = {
   searchMemories: (query) => ipcRenderer.invoke("mate:search-memories", query),
   listTools: () => ipcRenderer.invoke("mate:list-tools"),
   executeTool: (request) => ipcRenderer.invoke("mate:execute-tool", request),
+  chat: (text) => ipcRenderer.invoke("mate:chat", text),
 };
 
 contextBridge.exposeInMainWorld("desktopMate", api);
