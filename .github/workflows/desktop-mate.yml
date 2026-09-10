@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Install system runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb
       - run: npm install
       - run: npm test
       - name: Typecheck main process
@@ -22,4 +24,7 @@ jobs:
         run: npm run build:renderer
       - run: npm run perf
       - run: node scripts/security-check.mjs
-      - run: npm run package:dir
+      - name: Package application directory
+        run: npm run package:dir
+      - name: Electron startup smoke test
+        run: xvfb-run -a node scripts/smoke-electron.mjs
