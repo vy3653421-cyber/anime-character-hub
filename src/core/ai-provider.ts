@@ -18,9 +18,17 @@ export interface ChatResponse {
   usage?: { inputTokens?: number; outputTokens?: number };
 }
 
+export interface ChatStreamChunk {
+  text: string;
+  done?: boolean;
+  model?: string;
+  provider?: string;
+}
+
 export interface AIProvider {
   readonly id: string;
   chat(request: ChatRequest): Promise<ChatResponse>;
+  stream?(request: ChatRequest): AsyncIterable<ChatStreamChunk>;
 }
 
 export class ProviderRegistry {
