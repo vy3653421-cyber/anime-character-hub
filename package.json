@@ -2,6 +2,7 @@
   "name": "desktop-mate",
   "version": "0.1.0",
   "private": true,
+  "author": "Desktop Mate Project",
   "description": "Advanced native desktop companion",
   "main": "dist/main/main.js",
   "scripts": {
@@ -12,19 +13,19 @@
     "start": "electron .",
     "dev": "electron .",
     "perf": "node scripts/perf-check.mjs",
-    "package:dir": "npm run build && electron-builder --dir",
-    "package": "npm run build && electron-builder"
+    "package:dir": "npm run build && electron-builder --dir --publish never",
+    "package": "npm run build && electron-builder --publish never"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "electron": "^37.2.6",
     "three": "^0.178.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
     "@types/three": "^0.178.0",
+    "electron": "^37.2.6",
     "electron-builder": "^26.15.3",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
