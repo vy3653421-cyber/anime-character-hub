@@ -29,6 +29,11 @@ const openMainWindow = () => {
           return;
         }
 
+        // Let Chromium finish a render/compositor frame before requesting a capture.
+        // This avoids UnknownVizError on headless/Xvfb startup where did-finish-load
+        // can fire before the first drawable surface is ready.
+        await new Promise((resolve) => setTimeout(resolve, 750));
+
         const bounds = window.getBounds();
         const loadedUrl = window.webContents.getURL();
         const visible = window.isVisible();
@@ -50,7 +55,12 @@ const openMainWindow = () => {
           const screenshotDir = path.join(process.cwd(), "qa-artifacts");
           mkdirSync(screenshotDir, { recursive: true });
           const screenshotPath = path.join(screenshotDir, "desktop-mate-runtime.png");
-          const image = await window.webContents.capturePage();
+          const image = await window.webContents.capturePage({
+            x: 0,
+            y: 0,
+            width: bounds.width,
+            height: bounds.height,
+          });
           writeFileSync(screenshotPath, image.toPNG());
           console.log("DESKTOP_MATE_VISUAL_QA_ARTIFACT", screenshotPath);
         } catch (error) {
