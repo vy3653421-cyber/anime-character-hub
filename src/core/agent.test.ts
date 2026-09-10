@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { AssistantAgent } from "./agent";
 import type { AIProvider } from "./ai-provider";
 import { MemoryStore } from "./memory";
@@ -42,7 +43,6 @@ test("AssistantAgent aborts an active streamed response before committing histor
       yield { text: "should-not-arrive", done: true, model: "mock-stream", provider: "mock-stream" };
     },
   };
-
   const agent = new AssistantAgent(provider, new MemoryStore(), {
     name: "Mate",
     personality: "Be useful and precise.",
@@ -50,12 +50,13 @@ test("AssistantAgent aborts an active streamed response before committing histor
   });
   const controller = new AbortController();
 
-  const stream = agent.streamResponse("Cancel this response", "test-request", controller.signal);
-  const first = await stream.next();
+  const stream = agent.streamResponse("Cancel this response", randomUUID(), controller.signal);
+  const iterator = stream[Symbol.asyncIterator]();
+  const first = await iterator.next();
   assert.equal(first.value?.text, "partial");
   controller.abort();
 
-  await assert.rejects(stream.next(), (error: unknown) => {
+  await assert.rejects(iterator.next(), (error: unknown) => {
     return error instanceof DOMException && error.name === "AbortError";
   });
 });
