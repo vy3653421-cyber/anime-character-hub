@@ -6,16 +6,18 @@ const orchestrator = await readFile("src/core/tool-orchestrator.ts", "utf8");
 const preload = await readFile("src/main/preload.ts", "utf8");
 const window = await readFile("src/main/window.ts", "utf8");
 
+const confirmationBoundaryProtected =
+  /calls\.push\(\{[\s\S]*?toolId:\s*parsed\.toolId\.trim\(\)[\s\S]*?confirmed:\s*false,/.test(orchestrator) &&
+  orchestrator.includes("Model output is never a proof of user consent") &&
+  orchestrator.includes("export { parseToolCalls");
+
 const checks = [
   ["desktop bridge has no arbitrary process execution", !/\b(exec|execFile|spawn|spawnSync|fork)\s*\(/.test(tools)],
   ["external URL execution is restricted to HTTP(S)", /url\.protocol === "https:" \|\| url\.protocol === "http:"/.test(tools)],
   ["unknown tools are denied by policy", /Tool is not registered/.test(permissions)],
   ["restricted tools are denied by policy", /Tool is restricted/.test(permissions)],
   ["confirmation-gated tools require explicit confirmation", /requiresConfirmation && !confirmed/.test(permissions)],
-  [
-    "AI tool output cannot self-authorize confirmation",
-    orchestrator.includes("confirmed: false") && orchestrator.includes("Model output is never proof of user consent"),
-  ],
+  ["AI tool output cannot self-authorize confirmation", confirmationBoundaryProtected],
   ["BrowserWindow uses context isolation", /contextIsolation:\s*true/.test(window)],
   ["BrowserWindow disables Node integration", /nodeIntegration:\s*false/.test(window)],
   ["BrowserWindow enables sandboxing", /sandbox:\s*true/.test(window)],
