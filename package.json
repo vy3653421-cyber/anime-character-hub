@@ -10,7 +10,8 @@
     "build:renderer": "vite build --config vite.config.ts",
     "test": "node scripts/run-tests.mjs",
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "perf": "node scripts/perf-check.mjs"
   },
   "engines": {
     "node": ">=20"
