@@ -10,16 +10,13 @@ export interface CompanionSettings {
   toolConfirmations: boolean;
 }
 
+export interface StreamChunk { requestId: string; text: string; done?: boolean; model?: string; provider?: string; }
+
 export interface DesktopMateAPI {
   getStatus(): Promise<{ ready: boolean; version: string }>;
   getCapabilities(): Promise<{
-    runtime: string;
-    secureIpc: boolean;
-    avatar: { enabled: boolean; reason?: string };
-    ai: { enabled: boolean; reason?: string };
-    voice: { enabled: boolean };
-    desktopTools: { enabled: boolean; reason?: string };
-    memory: { enabled: boolean; durable: boolean };
+    runtime: string; secureIpc: boolean; avatar: { enabled: boolean; reason?: string }; ai: { enabled: boolean; reason?: string };
+    voice: { enabled: boolean }; desktopTools: { enabled: boolean; reason?: string }; memory: { enabled: boolean; durable: boolean };
     settings: { enabled: boolean; durable: boolean };
   }>;
   listMemories(): Promise<Array<{ id: string; createdAt: string; content: string; tags: string[] }>>;
@@ -28,6 +25,8 @@ export interface DesktopMateAPI {
   listTools(): Promise<Array<{ id: string; description: string; risk: string; requiresConfirmation: boolean }>>;
   executeTool(request: { toolId: string; input?: unknown; confirmed?: boolean }): Promise<{ ok: boolean; requiresConfirmation?: boolean; reason?: string; data?: unknown }>;
   chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
+  chatStream(text: string): Promise<{ requestId: string }>;
+  onChatStream(listener: (chunk: StreamChunk) => void): () => void;
   resetSession(): Promise<{ ok: boolean; reason?: string }>;
   getSettings(): Promise<CompanionSettings>;
   updateSettings(patch: Partial<CompanionSettings>): Promise<CompanionSettings>;
@@ -42,6 +41,12 @@ const api: DesktopMateAPI = {
   listTools: () => ipcRenderer.invoke("mate:list-tools"),
   executeTool: (request) => ipcRenderer.invoke("mate:execute-tool", request),
   chat: (text) => ipcRenderer.invoke("mate:chat", text),
+  chatStream: (text) => ipcRenderer.invoke("mate:chat-stream", text),
+  onChatStream: (listener) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, chunk: StreamChunk) => listener(chunk);
+    ipcRenderer.on("mate:chat-stream-chunk", wrapped);
+    return () => ipcRenderer.removeListener("mate:chat-stream-chunk", wrapped);
+  },
   resetSession: () => ipcRenderer.invoke("mate:reset-session"),
   getSettings: () => ipcRenderer.invoke("mate:get-settings"),
   updateSettings: (patch) => ipcRenderer.invoke("mate:update-settings", patch),
