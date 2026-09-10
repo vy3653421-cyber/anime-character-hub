@@ -3,8 +3,9 @@ name: Desktop Mate Avatar Asset
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "public/assets/avatar/**"
+    paths:
+      - "tools/blender/**"
+      - ".github/workflows/avatar-asset.yml"
   workflow_dispatch:
 
 permissions:
