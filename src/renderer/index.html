@@ -12,7 +12,7 @@
       #app { position: relative; width: 100%; height: 100%; }
       #avatar { position: absolute; inset: 0; }
       #avatar canvas { display: block; width: 100%; height: 100%; }
-      .hud { position: absolute; left: 20px; bottom: 20px; width: min(92vw, 420px); padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(16,16,22,.78); backdrop-filter: blur(18px); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+      .hud { position: absolute; left: 20px; right: 20px; bottom: 20px; max-height: calc(100% - 40px); overflow: auto; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(16,16,22,.82); backdrop-filter: blur(18px); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
       .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; background: rgba(120,170,255,.12); color: #bcd4ff; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
       h1 { margin: 9px 0 5px; font-size: 21px; }
       p { margin: 0; color: #aaaab4; font-size: 12px; line-height: 1.45; }
@@ -23,6 +23,19 @@
       .value { margin-top: 4px; font-size: 12px; }
       .pending { color: #e8d59a; }
       .ready { color: #a8e0b0; }
+      .section { margin-top: 14px; }
+      .section-title { font-size: 11px; color: #858590; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 7px; }
+      #chatLog { max-height: 130px; overflow: auto; display: grid; gap: 6px; }
+      .message { padding: 8px 10px; border-radius: 10px; font-size: 12px; line-height: 1.4; white-space: pre-wrap; }
+      .user { background: rgba(120,170,255,.10); }
+      .assistant { background: rgba(255,255,255,.05); }
+      .chat-row { display: flex; gap: 7px; margin-top: 7px; }
+      input, button { border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: rgba(255,255,255,.06); color: #eeeef2; font: inherit; }
+      input { min-width: 0; flex: 1; padding: 9px 10px; outline: none; }
+      button { padding: 9px 12px; cursor: pointer; }
+      button:hover { background: rgba(255,255,255,.10); }
+      .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+      .settings-row button { width: 100%; }
     </style>
   </head>
   <body>
@@ -30,10 +43,27 @@
       <div id="avatar" aria-label="3D avatar viewport"></div>
       <section class="hud">
         <span class="badge">Desktop Mate</span>
-        <h1>Avatar Runtime</h1>
-        <p>Real GLB assets are loaded only when present and validated. No placeholder character is reported as production-ready.</p>
-        <div id="status">Initializing 3D runtime…</div>
+        <h1>Companion Runtime</h1>
+        <p>Real avatar, AI, voice and desktop capabilities are reported only when their runtime dependencies are actually available.</p>
+        <div id="status">Initializing runtime…</div>
         <div id="capabilities" class="grid" aria-label="Runtime capabilities"></div>
+
+        <div class="section">
+          <div class="section-title">Conversation</div>
+          <div id="chatLog" aria-live="polite"></div>
+          <form id="chatForm" class="chat-row">
+            <input id="chatInput" autocomplete="off" placeholder="Talk to your companion…" aria-label="Message" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Quick settings</div>
+          <div class="settings-row">
+            <button id="alwaysOnTop" type="button">Always on top: …</button>
+            <button id="voiceEnabled" type="button">Voice: …</button>
+          </div>
+        </div>
       </section>
     </main>
     <script type="module" src="./renderer.ts"></script>
