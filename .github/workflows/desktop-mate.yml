@@ -39,8 +39,15 @@ jobs:
         run: npm run package:dir
       - name: Verify packaged runtime assets
         run: npm run validate:packaged-assets
-      - name: Electron startup smoke test
+      - name: Electron startup and visual smoke test
         run: xvfb-run -a node scripts/smoke-electron.mjs
+      - name: Upload runtime visual QA screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mate-runtime-visual-qa
+          path: qa-artifacts/desktop-mate-runtime.png
+          if-no-files-found: error
 
   cross-platform-package:
     name: Package (${{ matrix.os }})
