@@ -18,6 +18,20 @@ export interface SpeechInput {
   onError(listener: (error: Error) => void): () => void;
 }
 
+type SpeechRecognitionAlternativeLike = {
+  transcript?: unknown;
+  confidence?: unknown;
+};
+
+type SpeechRecognitionResultLike = {
+  0?: SpeechRecognitionAlternativeLike;
+  isFinal?: unknown;
+};
+
+type SpeechRecognitionEventLike = {
+  results?: unknown;
+};
+
 type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
@@ -92,20 +106,19 @@ export class BrowserSpeechInput implements SpeechInput {
 
   private handleResult(event: unknown): void {
     if (typeof event !== "object" || event === null || !("results" in event)) return;
-    const results = (event as { results: unknown }).results;
+    const results = (event as SpeechRecognitionEventLike).results;
     if (!Array.isArray(results)) return;
+
     for (const item of results) {
       if (!item || typeof item !== "object" || !("0" in item)) continue;
-      const first = (item as { 0?: { transcript?: unknown; confidence?: unknown } })[0];
-      if (!first || typeof first.transcript !== "string") continue;
-      const index = results.indexOf(item);
-      const isFinal = Boolean((item as { isFinal?: unknown }).isFinal);
+      const first = (item as SpeechRecognitionResultLike)[0];
+      if (!first || typeof first !== "object" || typeof first.transcript !== "string") continue;
+      const isFinal = Boolean((item as SpeechRecognitionResultLike).isFinal);
       this.resultListeners.forEach((listener) => listener({
         transcript: first.transcript.trim(),
         confidence: typeof first.confidence === "number" ? first.confidence : undefined,
         isFinal,
       }));
-      void index;
     }
   }
 }
