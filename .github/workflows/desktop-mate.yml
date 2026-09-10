@@ -36,6 +36,8 @@ jobs:
       - run: node scripts/security-check.mjs
       - name: Package application directory
         run: npm run package:dir
+      - name: Verify packaged runtime assets
+        run: npm run validate:packaged-assets
       - name: Electron startup smoke test
         run: xvfb-run -a node scripts/smoke-electron.mjs
 
@@ -54,6 +56,8 @@ jobs:
       - run: npm install
       - name: Build and package application directory
         run: npm run package:dir
+      - name: Verify packaged runtime assets
+        run: npm run validate:packaged-assets
       - name: Upload packaged application
         uses: actions/upload-artifact@v4
         with:
