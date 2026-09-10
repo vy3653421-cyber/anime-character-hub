@@ -20,6 +20,29 @@ const openMainWindow = () => {
     });
     mainWindow.webContents.once("did-finish-load", () => {
       if (process.env.DESKTOP_MATE_SMOKE === "1") {
+        const bounds = mainWindow?.getBounds();
+        const loadedUrl = mainWindow?.webContents.getURL() ?? "";
+        const visible = mainWindow?.isVisible() === true;
+        const validBounds = Boolean(bounds && bounds.width >= 320 && bounds.height >= 240);
+        const loadedRenderer = loadedUrl.startsWith("file:") && loadedUrl.endsWith("index.html");
+
+        if (!visible || !validBounds || !loadedRenderer) {
+          console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", {
+            visible,
+            bounds,
+            loadedUrl,
+          });
+          quitting = true;
+          app.exit(1);
+          return;
+        }
+
+        console.log("DESKTOP_MATE_RUNTIME_QA_OK", {
+          visible,
+          width: bounds?.width,
+          height: bounds?.height,
+          loadedRenderer,
+        });
         console.log("DESKTOP_MATE_SMOKE_OK");
         quitting = true;
         app.quit();
