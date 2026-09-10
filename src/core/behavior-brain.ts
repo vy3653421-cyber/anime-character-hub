@@ -36,6 +36,7 @@ export class BehaviorBrain {
   }) {}
 
   decide(event: BehaviorEvent, now = Date.now()): BehaviorDecision {
+    const previousEventAt = this.lastEventAt;
     this.lastEventAt = now;
     const autonomy = clamp(this.config.autonomy);
 
@@ -60,7 +61,7 @@ export class BehaviorBrain {
       return this.decision("sleeping", 0.35, "none", false, undefined, now);
     }
 
-    return now - this.lastEventAt >= this.config.idleAfterMs
+    return now - previousEventAt >= this.config.idleAfterMs
       ? this.decision("sleeping", 0.3, "none", false, undefined, now)
       : this.decision("idle", 0.2, "environment", false, undefined, now);
   }
