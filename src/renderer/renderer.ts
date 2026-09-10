@@ -18,10 +18,14 @@ type DesktopMateSettings = {
   toolConfirmations: boolean;
 };
 
+type DesktopTool = { id: string; description: string; risk: string; requiresConfirmation: boolean };
+
 type DesktopMateBridge = {
   chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
   getSettings(): Promise<DesktopMateSettings>;
   updateSettings(patch: Partial<DesktopMateSettings>): Promise<DesktopMateSettings>;
+  listTools(): Promise<DesktopTool[]>;
+  executeTool(request: { toolId: string; input?: unknown; confirmed?: boolean }): Promise<{ ok: boolean; requiresConfirmation?: boolean; reason?: string; data?: unknown }>;
 };
 
 declare global { interface Window { desktopMate?: DesktopMateBridge; } }
@@ -30,12 +34,13 @@ const mount = document.querySelector<HTMLDivElement>("#avatar");
 const status = document.querySelector<HTMLDivElement>("#status");
 const capabilities = document.querySelector<HTMLDivElement>("#capabilities");
 const chatLog = document.querySelector<HTMLDivElement>("#chatLog");
+const toolsList = document.querySelector<HTMLDivElement>("#toolsList");
 const chatForm = document.querySelector<HTMLFormElement>("#chatForm");
 const chatInput = document.querySelector<HTMLInputElement>("#chatInput");
 const alwaysOnTopButton = document.querySelector<HTMLButtonElement>("#alwaysOnTop");
 const voiceEnabledButton = document.querySelector<HTMLButtonElement>("#voiceEnabled");
 const microphoneButton = document.querySelector<HTMLButtonElement>("#microphone");
-if (!mount || !status || !capabilities || !chatLog || !chatForm || !chatInput || !alwaysOnTopButton || !voiceEnabledButton || !microphoneButton) throw new Error("Desktop Mate renderer mount failed");
+if (!mount || !status || !capabilities || !chatLog || !toolsList || !chatForm || !chatInput || !alwaysOnTopButton || !voiceEnabledButton || !microphoneButton) throw new Error("Desktop Mate renderer mount failed");
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
@@ -146,6 +151,43 @@ const loadVoiceManifest = async () => {
   }
 };
 
+const loadTools = async (bridge: DesktopMateBridge) => {
+  try {
+    const tools = await bridge.listTools();
+    for (const tool of tools) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = tool.id;
+      button.title = tool.description;
+      button.addEventListener("click", async () => {
+        const settings = await bridge.getSettings();
+        const needsConfirmation = tool.requiresConfirmation || tool.risk === "confirm";
+        if (needsConfirmation && settings.toolConfirmations) {
+          const approved = window.confirm(`Allow Desktop Mate to run “${tool.id}”?\n\n${tool.description}`);
+          if (!approved) {
+            status.textContent = `Action cancelled · ${tool.id}`;
+            return;
+          }
+        }
+        button.disabled = true;
+        try {
+          const result = await bridge.executeTool({ toolId: tool.id, confirmed: needsConfirmation });
+          status.textContent = result.ok ? `Action completed · ${tool.id}` : `Action blocked · ${result.reason || "permission denied"}`;
+        } catch (error) {
+          status.textContent = `Action failed · ${error instanceof Error ? error.message : "unknown error"}`;
+        } finally {
+          button.disabled = false;
+        }
+      });
+      toolsList.appendChild(button);
+    }
+    renderCard("Desktop tools", `${tools.length} policy-gated`, true);
+  } catch (error) {
+    renderCard("Desktop tools", "Unavailable", false);
+    console.warn("[Tools] unavailable", error);
+  }
+};
+
 const sendChat = async (text: string) => {
   const bridge = window.desktopMate;
   if (!bridge || !text.trim()) return;
@@ -174,6 +216,8 @@ if (bridge) {
     microphoneButton.textContent = `Mic: ${settings.microphoneEnabled ? "on" : "off"}`;
     renderCard("Settings", "Persistent", true);
   }).catch((error) => console.warn("[Settings] unavailable", error));
+
+  void loadTools(bridge);
 
   speechInput.onResult((result) => {
     if (!result.isFinal) return;
