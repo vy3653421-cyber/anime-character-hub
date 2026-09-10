@@ -5,7 +5,9 @@
   "description": "Advanced native desktop companion foundation",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "vite build --config vite.config.ts",
     "test": "node --test --import tsx src/core/*.test.ts",
     "start": "electron .",
     "dev": "electron ."
@@ -14,11 +16,14 @@
     "node": ">=20"
   },
   "dependencies": {
-    "electron": "^37.2.6"
+    "electron": "^37.2.6",
+    "three": "^0.178.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@types/three": "^0.178.0",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6"
   }
 }
