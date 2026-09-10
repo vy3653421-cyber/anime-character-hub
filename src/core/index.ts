@@ -1,5 +1,6 @@
 export * from "./agent";
 export * from "./ai-provider";
+export * from "./avatar-controller";
 export * from "./avatar-state";
 export * from "./behavior-brain";
 export * from "./contracts";
