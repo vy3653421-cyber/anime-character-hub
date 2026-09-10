@@ -1,4 +1,7 @@
 import { app, ipcMain } from "electron";
+import { AssistantAgent } from "../core/agent";
+import type { AIProvider } from "../core/ai-provider";
+import { OpenAICompatibleProvider } from "../core/http-ai-provider";
 import { JsonFileMemoryPersistence } from "../core/memory-store";
 import { MemoryStore } from "../core/memory";
 import { DesktopToolRuntime, type DesktopToolRequest } from "./desktop-tools";
@@ -11,12 +14,30 @@ export const IPC_CHANNELS = {
   searchMemories: "mate:search-memories",
   listTools: "mate:list-tools",
   executeTool: "mate:execute-tool",
+  chat: "mate:chat",
 } as const;
 
 const memory = new MemoryStore(
   new JsonFileMemoryPersistence(`${app.getPath("userData")}/memory.json`),
 );
 const tools = new DesktopToolRuntime();
+
+function createProvider(): AIProvider | undefined {
+  const apiKey = process.env.DESKTOP_MATE_AI_API_KEY?.trim();
+  const baseUrl = process.env.DESKTOP_MATE_AI_BASE_URL?.trim();
+  const model = process.env.DESKTOP_MATE_AI_MODEL?.trim();
+  if (!apiKey || !baseUrl || !model) return undefined;
+  return new OpenAICompatibleProvider({ id: "openai-compatible", baseUrl, apiKey, model });
+}
+
+const provider = createProvider();
+const agent = provider
+  ? new AssistantAgent(provider, memory, {
+      name: process.env.DESKTOP_MATE_NAME?.trim() || "Desktop Mate",
+      personality: process.env.DESKTOP_MATE_PERSONALITY?.trim() || "Helpful, precise, and transparent.",
+      responseStyle: "balanced",
+    })
+  : undefined;
 
 export function registerIpcHandlers(version: string): void {
   ipcMain.handle(IPC_CHANNELS.getStatus, async () => {
@@ -28,7 +49,7 @@ export function registerIpcHandlers(version: string): void {
     runtime: "electron",
     secureIpc: true,
     avatar: { enabled: false, reason: "verified GLB asset not installed" },
-    ai: { enabled: false, reason: "provider credentials/configuration not installed" },
+    ai: agent ? { enabled: true } : { enabled: false, reason: "provider credentials/configuration not installed" },
     voice: { enabled: false },
     desktopTools: { enabled: true, reason: "permission-gated allowlisted bridge" },
     memory: { enabled: true, durable: true },
@@ -55,5 +76,11 @@ export function registerIpcHandlers(version: string): void {
   ipcMain.handle(IPC_CHANNELS.executeTool, async (_event, request: unknown) => {
     if (typeof request !== "object" || request === null) throw new Error("Invalid tool request");
     return tools.execute(request as DesktopToolRequest);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.chat, async (_event, text: unknown) => {
+    if (!agent) throw new Error("AI provider is not configured");
+    if (typeof text !== "string" || !text.trim()) throw new Error("Chat text is required");
+    return agent.respond(text.trim());
   });
 }
