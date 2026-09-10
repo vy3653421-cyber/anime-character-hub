@@ -9,6 +9,8 @@ export interface VoiceManifest {
   assets: VoiceAsset[];
 }
 
+export type VoiceAvailability = "not-installed" | "no-recordings" | "ready";
+
 const VALID_VISEMES = new Set(["sil", "A", "E", "I", "O", "U", "M"]);
 
 export function validateVoiceManifest(value: unknown): value is VoiceManifest {
@@ -32,6 +34,11 @@ export function validateVoiceManifest(value: unknown): value is VoiceManifest {
         && (item.weight === undefined || (typeof item.weight === "number" && Number.isFinite(item.weight) && item.weight >= 0 && item.weight <= 1));
     });
   });
+}
+
+export function getVoiceAvailability(manifest: VoiceManifest | undefined): VoiceAvailability {
+  if (!manifest) return "not-installed";
+  return manifest.assets.length > 0 ? "ready" : "no-recordings";
 }
 
 export function selectVoiceAsset(manifest: VoiceManifest, assetId: string): VoiceAsset | undefined {
