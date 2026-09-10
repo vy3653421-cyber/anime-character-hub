@@ -72,6 +72,9 @@ const openMainWindow = () => {
       }
     });
     void mainWindow.loadFile(rendererEntry());
+    if (process.env.DESKTOP_MATE_SMOKE === "1") {
+      mainWindow.show();
+    }
     return mainWindow;
   }
   mainWindow.show();
