@@ -20,9 +20,10 @@ export const IPC_CHANNELS = {
   updateSettings: "mate:update-settings",
 } as const;
 
-const memory = new MemoryStore(new JsonFileMemoryPersistence(`${app.getPath("userData")}/memory.json`));
-const settings = new CompanionSettingsStore(`${app.getPath("userData")}/settings.json`);
-const tools = new DesktopToolRuntime();
+let memory: MemoryStore;
+let settings: CompanionSettingsStore;
+let tools: DesktopToolRuntime;
+let agent: AssistantAgent | undefined;
 
 function createProvider(): AIProvider | undefined {
   const apiKey = process.env.DESKTOP_MATE_AI_API_KEY?.trim();
@@ -32,27 +33,34 @@ function createProvider(): AIProvider | undefined {
   return new OpenAICompatibleProvider({ id: "openai-compatible", baseUrl, apiKey, model });
 }
 
-const provider = createProvider();
-const agent = provider
-  ? new AssistantAgent(provider, memory, {
-      name: process.env.DESKTOP_MATE_NAME?.trim() || "Desktop Mate",
-      personality: process.env.DESKTOP_MATE_PERSONALITY?.trim() || "Helpful, precise, and transparent.",
-      responseStyle: "balanced",
-    })
-  : undefined;
-
 export function registerIpcHandlers(version: string): void {
+  if (memory || settings || tools) throw new Error("IPC handlers are already registered");
+
+  const userDataPath = app.getPath("userData");
+  memory = new MemoryStore(new JsonFileMemoryPersistence(`${userDataPath}/memory.json`));
+  settings = new CompanionSettingsStore(`${userDataPath}/settings.json`);
+  tools = new DesktopToolRuntime();
+
+  const provider = createProvider();
+  agent = provider
+    ? new AssistantAgent(provider, memory, {
+        name: process.env.DESKTOP_MATE_NAME?.trim() || "Desktop Mate",
+        personality: process.env.DESKTOP_MATE_PERSONALITY?.trim() || "Helpful, precise, and transparent.",
+        responseStyle: "balanced",
+      })
+    : undefined;
+
   ipcMain.handle(IPC_CHANNELS.getStatus, async () => {
     await Promise.all([memory.ready(), settings.ready()]);
     return { ready: true, version };
   });
 
-  ipcMain.handle(IPC_CHANNELS.getCapabilities, () => ({
+  ipcMain.handle(IPC_CHANNELS.getCapabilities, async () => ({
     runtime: "electron",
     secureIpc: true,
     avatar: { enabled: false, reason: "verified GLB asset not installed" },
     ai: agent ? { enabled: true } : { enabled: false, reason: "provider credentials/configuration not installed" },
-    voice: { enabled: false },
+    voice: { enabled: false, reason: "human-recorded voice asset not installed" },
     desktopTools: { enabled: true, reason: "permission-gated allowlisted bridge" },
     memory: { enabled: true, durable: true },
     settings: { enabled: true, durable: true },
