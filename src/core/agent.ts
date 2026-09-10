@@ -73,9 +73,8 @@ export class AssistantAgent {
     };
   }
 
-  async *streamResponse(userText: string): AsyncIterable<ChatStreamChunk & { requestId: string }> {
+  async *streamResponse(userText: string, requestId = randomUUID()): AsyncIterable<ChatStreamChunk & { requestId: string }> {
     const normalizedText = userText.trim();
-    const requestId = randomUUID();
     const messages = this.buildMessages(normalizedText);
     if (this.orchestrator || !this.provider.stream) {
       const response = await this.respond(normalizedText);
