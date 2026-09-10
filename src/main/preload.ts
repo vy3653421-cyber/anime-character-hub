@@ -28,6 +28,7 @@ export interface DesktopMateAPI {
   listTools(): Promise<Array<{ id: string; description: string; risk: string; requiresConfirmation: boolean }>>;
   executeTool(request: { toolId: string; input?: unknown; confirmed?: boolean }): Promise<{ ok: boolean; requiresConfirmation?: boolean; reason?: string; data?: unknown }>;
   chat(text: string): Promise<{ requestId: string; text: string; model: string; provider: string }>;
+  resetSession(): Promise<{ ok: boolean; reason?: string }>;
   getSettings(): Promise<CompanionSettings>;
   updateSettings(patch: Partial<CompanionSettings>): Promise<CompanionSettings>;
 }
@@ -41,6 +42,7 @@ const api: DesktopMateAPI = {
   listTools: () => ipcRenderer.invoke("mate:list-tools"),
   executeTool: (request) => ipcRenderer.invoke("mate:execute-tool", request),
   chat: (text) => ipcRenderer.invoke("mate:chat", text),
+  resetSession: () => ipcRenderer.invoke("mate:reset-session"),
   getSettings: () => ipcRenderer.invoke("mate:get-settings"),
   updateSettings: (patch) => ipcRenderer.invoke("mate:update-settings", patch),
 };
