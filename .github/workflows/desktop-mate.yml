@@ -17,13 +17,15 @@ jobs:
       - name: Install system runtime dependencies
         run: sudo apt-get update && sudo apt-get install -y xvfb
       - run: npm install
-      - name: Configure Electron sandbox helper
+      - name: Verify Electron sandbox helper when available
         run: |
-          if [ -f node_modules/electron/dist/chrome-sandbox ]; then
-            sudo chown root:root node_modules/electron/dist/chrome-sandbox
-            sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+          sandbox="node_modules/electron/dist/chrome-sandbox"
+          if [ -f "$sandbox" ]; then
+            sudo chown root:root "$sandbox"
+            sudo chmod 4755 "$sandbox"
+            echo "Electron sandbox helper configured."
           else
-            echo "Electron sandbox helper not present; smoke script will use Linux no-sandbox fallback."
+            echo "Electron sandbox helper is not shipped by this Electron package; continuing because the smoke runner has a Linux no-sandbox fallback."
           fi
       - run: npm test
       - name: Typecheck main process
