@@ -50,7 +50,12 @@ export class AvatarLipSync {
 
   update(deltaSeconds: number): void {
     if (!this.playing) return;
-    this.elapsed += Math.max(0, deltaSeconds);
+    this.syncToAudioTime(this.elapsed + Math.max(0, deltaSeconds));
+  }
+
+  syncToAudioTime(audioTimeSeconds: number): void {
+    if (!this.playing) return;
+    this.elapsed = Math.max(0, Number.isFinite(audioTimeSeconds) ? audioTimeSeconds : 0);
 
     while (this.cueIndex + 1 < this.cues.length && this.cues[this.cueIndex + 1].start <= this.elapsed) {
       this.cueIndex += 1;
