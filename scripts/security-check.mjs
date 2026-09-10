@@ -12,7 +12,10 @@ const checks = [
   ["unknown tools are denied by policy", /Tool is not registered/.test(permissions)],
   ["restricted tools are denied by policy", /Tool is restricted/.test(permissions)],
   ["confirmation-gated tools require explicit confirmation", /requiresConfirmation && !confirmed/.test(permissions)],
-  ["AI tool output cannot self-authorize confirmation", /confirmed:\s*false/.test(orchestrator) && /Model output is never proof of user consent/.test(orchestrator)],
+  [
+    "AI tool output cannot self-authorize confirmation",
+    orchestrator.includes("confirmed: false") && orchestrator.includes("Model output is never proof of user consent"),
+  ],
   ["BrowserWindow uses context isolation", /contextIsolation:\s*true/.test(window)],
   ["BrowserWindow disables Node integration", /nodeIntegration:\s*false/.test(window)],
   ["BrowserWindow enables sandboxing", /sandbox:\s*true/.test(window)],
