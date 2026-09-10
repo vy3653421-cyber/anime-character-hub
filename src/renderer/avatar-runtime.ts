@@ -4,6 +4,7 @@ import type { ResponsePlan } from "../core/response-plan";
 import type { AvatarState } from "../core/avatar-state";
 import { AvatarExpressionController, type AvatarExpressionSet } from "./avatar-expression-controller";
 import { AvatarPhysics } from "./avatar-physics";
+import { AvatarLipSync, type LipSyncStatus, type VisemeCue } from "./avatar-lipsync";
 
 export interface AvatarRuntimeStatus {
   loaded: boolean;
@@ -14,6 +15,7 @@ export interface AvatarRuntimeStatus {
   morphTargetCount: number;
   expressionCount: number;
   secondaryPhysicsBound: number;
+  lipSync: LipSyncStatus;
 }
 
 const SECONDARY_BONE_PATTERN = /(hair|ribbon|accessory|tail|cloth|skirt|ear|ponytail|bang)/i;
@@ -22,6 +24,7 @@ export class AvatarRuntime {
   private readonly controller = new AvatarAnimationController();
   private readonly expressions = new AvatarExpressionController();
   private readonly physics = new AvatarPhysics();
+  private readonly lipSync = new AvatarLipSync(this.expressions);
   private mixer?: THREE.AnimationMixer;
   private clips: THREE.AnimationClip[] = [];
   private activeAction?: THREE.AnimationAction;
@@ -49,10 +52,7 @@ export class AvatarRuntime {
     root.traverse((object) => {
       if (object.name && SECONDARY_BONE_PATTERN.test(object.name)) secondaryBones.add(object.name);
     });
-    this.secondaryPhysicsBound = this.physics.bind(
-      root,
-      [...secondaryBones].map((boneName) => ({ boneName })),
-    ).bound;
+    this.secondaryPhysicsBound = this.physics.bind(root, [...secondaryBones].map((boneName) => ({ boneName }))).bound;
     this.applyState("idle", 1);
     return this.status();
   }
@@ -70,10 +70,27 @@ export class AvatarRuntime {
     this.expressions.clearExpressions();
   }
 
+  loadLipSync(cues: VisemeCue[]): void {
+    this.lipSync.load(cues);
+  }
+
+  startLipSync(): void {
+    this.lipSync.start();
+  }
+
+  stopLipSync(): void {
+    this.lipSync.stop();
+  }
+
+  syncLipSyncToAudioTime(audioTimeSeconds: number): void {
+    this.lipSync.syncToAudioTime(audioTimeSeconds);
+  }
+
   update(deltaSeconds: number): void {
     const delta = Math.max(0, deltaSeconds);
     this.mixer?.update(delta);
     this.physics.update(delta);
+    this.lipSync.update(delta);
     this.expressions.update(delta);
   }
 
@@ -87,6 +104,7 @@ export class AvatarRuntime {
       morphTargetCount: this.morphTargetCount,
       expressionCount: this.expressionCount,
       secondaryPhysicsBound: this.secondaryPhysicsBound,
+      lipSync: this.lipSync.status(),
     };
   }
 
@@ -102,6 +120,7 @@ export class AvatarRuntime {
     this.secondaryPhysicsBound = 0;
     this.activeClip = undefined;
     this.physics.clear();
+    this.lipSync.stop();
     this.expressions.clearExpressions();
   }
 
