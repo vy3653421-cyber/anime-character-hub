@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+import { randomUUID } from "node:crypto";
 import { AssistantAgent } from "../core/agent";
 import type { AIProvider } from "../core/ai-provider";
 import { inspectCapabilities } from "../core/capabilities";
@@ -70,11 +71,17 @@ export function registerIpcHandlers(version: string): void {
   ipcMain.handle(IPC_CHANNELS.chatStream, async (event, text: unknown) => {
     if (!agent) throw new Error("AI provider is not configured");
     if (typeof text !== "string" || !text.trim()) throw new Error("Chat text is required");
-    let requestId = "";
-    for await (const chunk of agent.streamResponse(text.trim())) {
-      requestId = chunk.requestId;
-      if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, chunk);
-    }
+    const requestId = randomUUID();
+    void (async () => {
+      try {
+        for await (const chunk of agent!.streamResponse(text.trim(), requestId)) {
+          if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, chunk);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "AI stream failed";
+        if (!event.sender.isDestroyed()) event.sender.send(IPC_CHANNELS.chatStreamChunk, { requestId, text: `AI unavailable: ${message}`, done: true, provider: "openai-compatible" });
+      }
+    })();
     return { requestId };
   });
   ipcMain.handle(IPC_CHANNELS.resetSession, () => {
