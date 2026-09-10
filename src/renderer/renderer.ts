@@ -116,7 +116,7 @@ const inspectAndLoadAvatar = (gltf: GLTF) => {
 
 const loadAvatar = async () => {
   try {
-    const gltf = await new GLTFLoader().loadAsync("/assets/avatar/avatar.glb");
+    const gltf = await new GLTFLoader().loadAsync("./assets/avatar/avatar.glb");
     inspectAndLoadAvatar(gltf);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown asset error";
@@ -130,7 +130,7 @@ const loadAvatar = async () => {
 
 const loadVoiceManifest = async () => {
   try {
-    const response = await fetch("/assets/voice/manifest.json", { cache: "no-store" });
+    const response = await fetch("./assets/voice/manifest.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`manifest request failed (${response.status})`);
     const value: unknown = await response.json();
     if (!validateVoiceManifest(value)) throw new Error("manifest failed validation");
