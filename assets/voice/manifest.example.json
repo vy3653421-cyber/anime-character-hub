@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "voiceId": "companion-en-01",
+  "displayName": "Companion Voice",
+  "actorCredit": "Human voice actor name",
+  "license": "Licensed for this project",
+  "assets": [
+    {
+      "id": "greeting",
+      "url": "/assets/voice/greeting.ogg",
+      "durationSeconds": 2.4,
+      "visemes": [
+        { "start": 0.00, "end": 0.18, "viseme": "sil" },
+        { "start": 0.18, "end": 0.34, "viseme": "A", "weight": 0.8 },
+        { "start": 0.34, "end": 0.52, "viseme": "E", "weight": 0.7 }
+      ]
+    }
+  ]
+}
