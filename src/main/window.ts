@@ -51,47 +51,46 @@ async function persistWindowState(filePath: string, win: BrowserWindow): Promise
 export function createMainWindow(statePath?: string): BrowserWindow {
   const fallback = { ...DEFAULT_STATE };
   const savedStatePromise = statePath ? loadWindowState(statePath) : Promise.resolve(fallback);
-  let win: BrowserWindow;
 
-  const create = (state: WindowState) => {
-    const bounds = stateIsVisible(state) ? state : fallback;
-    win = new BrowserWindow({
-      x: bounds.x || undefined,
-      y: bounds.y || undefined,
-      width: bounds.width,
-      height: bounds.height,
-      minWidth: MIN_WIDTH,
-      minHeight: MIN_HEIGHT,
-      frame: false,
-      transparent: true,
-      resizable: true,
-      alwaysOnTop: true,
-      show: false,
-      backgroundColor: "#00000000",
-      webPreferences: {
-        preload: path.join(__dirname, "preload.js"),
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-      },
+  const win = new BrowserWindow({
+    x: fallback.x,
+    y: fallback.y,
+    width: fallback.width,
+    height: fallback.height,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
+    frame: false,
+    transparent: true,
+    resizable: true,
+    alwaysOnTop: true,
+    show: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  win.once("ready-to-show", () => win.show());
+  if (statePath) {
+    let saveTimer: NodeJS.Timeout | undefined;
+    const save = () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        saveTimer = undefined;
+        void persistWindowState(statePath, win);
+      }, 150);
+    };
+    win.on("move", save);
+    win.on("resize", save);
+    win.on("closed", () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = undefined;
     });
+  }
 
-    win.once("ready-to-show", () => win.show());
-    if (statePath) {
-      const save = () => { void persistWindowState(statePath, win); };
-      win.on("move", save);
-      win.on("resize", save);
-      win.on("closed", save);
-    } else {
-      win.on("closed", () => undefined);
-    }
-    return win;
-  };
-
-  // BrowserWindow construction must remain synchronous for callers. Start from defaults,
-  // then restore persisted bounds before first display when the file is available.
-  // The async restoration only changes bounds; it never changes security settings.
-  win = create(fallback);
   void savedStatePromise.then((state) => {
     if (!win.isDestroyed() && stateIsVisible(state)) win.setBounds(state);
   });
