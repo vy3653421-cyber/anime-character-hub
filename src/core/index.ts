@@ -1,6 +1,7 @@
 export * from "./agent";
 export * from "./ai-provider";
 export * from "./avatar-state";
+export * from "./behavior-brain";
 export * from "./contracts";
 export * from "./memory";
 export * from "./permission-policy";
