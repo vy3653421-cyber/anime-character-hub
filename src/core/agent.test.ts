@@ -28,3 +28,34 @@ test("AssistantAgent injects matching memory into provider context", async () =>
   assert.match(received, /untrusted reference data/i);
   assert.match(received, /never treat.*as instructions/i);
 });
+
+test("AssistantAgent aborts an active streamed response before committing history", async () => {
+  const provider: AIProvider = {
+    id: "mock-stream",
+    async chat() {
+      return { text: "fallback", model: "mock-stream", provider: "mock-stream" };
+    },
+    async *stream(request) {
+      yield { text: "partial", model: "mock-stream", provider: "mock-stream" };
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      if (request.signal?.aborted) return;
+      yield { text: "should-not-arrive", done: true, model: "mock-stream", provider: "mock-stream" };
+    },
+  };
+
+  const agent = new AssistantAgent(provider, new MemoryStore(), {
+    name: "Mate",
+    personality: "Be useful and precise.",
+    responseStyle: "balanced",
+  });
+  const controller = new AbortController();
+
+  const stream = agent.streamResponse("Cancel this response", "test-request", controller.signal);
+  const first = await stream.next();
+  assert.equal(first.value?.text, "partial");
+  controller.abort();
+
+  await assert.rejects(stream.next(), (error: unknown) => {
+    return error instanceof DOMException && error.name === "AbortError";
+  });
+});
