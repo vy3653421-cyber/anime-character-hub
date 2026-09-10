@@ -2,6 +2,7 @@ export interface VoiceAsset {
   id: string;
   url: string;
   durationSeconds?: number;
+  transcript?: string;
   visemes?: Array<{ start: number; end: number; viseme: string; weight?: number }>;
 }
 
