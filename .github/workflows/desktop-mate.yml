@@ -54,14 +54,26 @@ jobs:
         with:
           node-version: 24
       - run: npm install
-      - name: Build and package application directory
+      - name: Build and package Windows installer
+        if: matrix.os == 'windows-latest'
+        run: npm run package
+      - name: Build and package macOS application directory
+        if: matrix.os == 'macos-latest'
         run: npm run package:dir
       - name: Verify packaged runtime assets
         run: npm run validate:packaged-assets
-      - name: Upload packaged application
+      - name: Upload Windows NSIS installer
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-mate-${{ matrix.os }}
+          name: desktop-mate-windows-installer
+          path: release/*.exe
+          if-no-files-found: error
+      - name: Upload macOS packaged application
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mate-macos-latest
           path: |
             dist/*-unpacked
             dist/*
