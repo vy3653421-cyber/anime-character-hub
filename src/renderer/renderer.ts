@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { AvatarRuntime } from "./avatar-runtime";
+import { validateAvatar } from "./avatar-validator";
 
 const mount = document.querySelector<HTMLDivElement>("#avatar");
 const status = document.querySelector<HTMLDivElement>("#status");
@@ -53,36 +54,37 @@ const renderCard = (label: string, value: string, ready: boolean) => {
   capabilities.appendChild(card);
 };
 
-const inspectAvatar = (gltf: GLTF) => {
-  const clips = gltf.animations.map((clip) => clip.name).filter(Boolean);
-  let skinnedMeshes = 0;
-  let morphTargets = 0;
-  gltf.scene.traverse((object) => {
-    if (object instanceof THREE.SkinnedMesh) {
-      skinnedMeshes += 1;
-      if (object.morphTargetDictionary) morphTargets += Object.keys(object.morphTargetDictionary).length;
-    }
-  });
-  return { clips, skinnedMeshes, morphTargets };
+const reportAvatar = (report: ReturnType<typeof validateAvatar>) => {
+  if (report.valid) {
+    status.textContent = `3D avatar validated · ${report.animationClips.length} clips · ${report.morphTargetCount} morph targets`;
+  } else {
+    status.textContent = `3D avatar rejected · ${report.errors.join("; ")}`;
+  }
+
+  renderCard("3D avatar", report.valid ? "Ready" : "Rejected", report.valid);
+  renderCard("Rig", `${report.skinnedMeshes} skinned mesh${report.skinnedMeshes === 1 ? "" : "es"}`, report.skinnedMeshes > 0);
+  renderCard("Animations", `${report.animationClips.length} detected`, report.animationClips.length > 0);
+  renderCard("Face", `${report.morphTargetCount} morph targets`, report.morphTargetCount > 0);
+  renderCard("Semantic map", `${Object.keys(report.semanticClips).length} mapped`, Boolean(report.semanticClips.idle));
+
+  for (const warning of report.warnings) console.warn(`[Avatar] ${warning}`);
+};
+
+const inspectAndLoadAvatar = (gltf: GLTF) => {
+  const report = validateAvatar(gltf.scene, gltf.animations);
+  reportAvatar(report);
+  if (!report.valid) return;
+
+  gltf.scene.position.y = -1.05;
+  avatarRoot = gltf.scene;
+  scene.add(avatarRoot);
+  avatarRuntime.load(avatarRoot, gltf.animations);
 };
 
 const loadAvatar = async () => {
   try {
     const gltf = await new GLTFLoader().loadAsync("/assets/avatar/avatar.glb");
-    const report = inspectAvatar(gltf);
-    if (report.skinnedMeshes === 0) throw new Error("Avatar GLB has no skinned mesh");
-    if (report.clips.length === 0) throw new Error("Avatar GLB has no animation clips");
-
-    gltf.scene.position.y = -1.05;
-    avatarRoot = gltf.scene;
-    scene.add(avatarRoot);
-    const runtimeStatus = avatarRuntime.load(avatarRoot, gltf.animations);
-
-    status.textContent = `3D avatar loaded · ${report.clips.length} animation clips · ${report.morphTargets} morph targets`;
-    renderCard("3D avatar", "Ready", true);
-    renderCard("Rig", `${report.skinnedMeshes} skinned mesh${report.skinnedMeshes === 1 ? "" : "es"}`, true);
-    renderCard("Animations", `${report.clips.length} verified`, true);
-    renderCard("Face", `${runtimeStatus.morphTargetCount} morph targets`, runtimeStatus.morphTargetCount > 0);
+    inspectAndLoadAvatar(gltf);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown asset error";
     status.textContent = `3D renderer ready · avatar asset unavailable (${message})`;
