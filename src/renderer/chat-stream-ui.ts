@@ -28,6 +28,12 @@ const installChatStreaming = () => {
     return message;
   };
 
+  const setBusy = (busy: boolean) => {
+    input.disabled = busy;
+    const sendButton = form.querySelector<HTMLButtonElement>("button[type=submit]");
+    if (sendButton) sendButton.disabled = busy;
+  };
+
   bridge.onChatStream((chunk) => {
     if (!activeRequestId || chunk.requestId !== activeRequestId) return;
     if (chunk.text) {
@@ -38,18 +44,14 @@ const installChatStreaming = () => {
     }
     if (chunk.done) {
       activeRequestId = undefined;
-      input.disabled = false;
-      const sendButton = form.querySelector<HTMLButtonElement>("button[type=submit]");
-      if (sendButton) sendButton.disabled = false;
+      setBusy(false);
       status.textContent = "AI response complete";
       input.focus();
     }
   });
 
-  document.addEventListener("submit", async (event) => {
-    if (event.target !== form) return;
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    event.stopImmediatePropagation();
     if (activeRequestId) return;
 
     const text = input.value.trim();
@@ -57,9 +59,7 @@ const installChatStreaming = () => {
 
     appendMessage("user", text);
     input.value = "";
-    input.disabled = true;
-    const sendButton = form.querySelector<HTMLButtonElement>("button[type=submit]");
-    if (sendButton) sendButton.disabled = true;
+    setBusy(true);
     assistantBubble = undefined;
     accumulated = "";
     status.textContent = "AI is responding…";
@@ -70,13 +70,12 @@ const installChatStreaming = () => {
       if (!activeRequestId) throw new Error("AI stream returned no request id");
     } catch (error) {
       activeRequestId = undefined;
-      input.disabled = false;
-      if (sendButton) sendButton.disabled = false;
+      setBusy(false);
       appendMessage("assistant", error instanceof Error ? `AI unavailable: ${error.message}` : "AI unavailable.");
       status.textContent = "AI request failed";
       input.focus();
     }
-  }, true);
+  });
 };
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installChatStreaming, { once: true });
