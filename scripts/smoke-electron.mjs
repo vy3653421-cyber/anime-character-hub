@@ -13,7 +13,10 @@ const entry = join(process.cwd(), "dist/main/main.js");
 if (!existsSync(entry)) throw new Error(`Built Electron entry is missing: ${entry}`);
 if (!existsSync(electronBinary)) throw new Error(`Electron binary is missing: ${electronBinary}`);
 
-const child = spawn(electronBinary, ["."], {
+const electronArgs = ["."];
+if (process.platform === "linux") electronArgs.unshift("--no-sandbox");
+
+const child = spawn(electronBinary, electronArgs, {
   cwd: process.cwd(),
   env: { ...process.env, DESKTOP_MATE_SMOKE: "1", ELECTRON_DISABLE_GPU: "1" },
   stdio: ["ignore", "pipe", "pipe"],
