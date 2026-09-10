@@ -5,6 +5,7 @@ import { AvatarRuntime } from "./avatar-runtime";
 import { AvatarVoiceController } from "./avatar-voice-controller";
 import { HumanVoicePlayback } from "./human-voice-playback";
 import { validateAvatar } from "./avatar-validator";
+import { resolveRecordedVoiceLine, validateVoiceManifest, type VoiceManifest } from "../core/voice-manifest";
 
 type DesktopMateSettings = {
   name: string;
@@ -45,6 +46,7 @@ const avatarRuntime = new AvatarRuntime();
 const voicePlayback = new HumanVoicePlayback();
 const voiceController = new AvatarVoiceController(avatarRuntime, voicePlayback);
 let avatarRoot: THREE.Object3D | undefined;
+let voiceManifest: VoiceManifest | undefined;
 
 renderer.setAnimationLoop(() => {
   const delta = clock.getDelta();
@@ -126,6 +128,21 @@ const loadAvatar = async () => {
   }
 };
 
+const loadVoiceManifest = async () => {
+  try {
+    const response = await fetch("/assets/voice/manifest.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`manifest request failed (${response.status})`);
+    const value: unknown = await response.json();
+    if (!validateVoiceManifest(value)) throw new Error("manifest failed validation");
+    voiceManifest = value;
+    renderCard("Voice manifest", `${value.displayName} · ${value.assets.length} recorded lines`, true);
+  } catch (error) {
+    voiceManifest = undefined;
+    const message = error instanceof Error ? error.message : "Unknown voice asset error";
+    renderCard("Voice manifest", `Not installed (${message})`, false);
+  }
+};
+
 const bridge = window.desktopMate;
 if (bridge) {
   void bridge.getSettings().then((settings) => {
@@ -144,6 +161,17 @@ if (bridge) {
     try {
       const response = await bridge.chat(text);
       renderMessage("assistant", response.text);
+      const settings = await bridge.getSettings();
+      if (settings.voiceEnabled && voiceManifest) {
+        const recordedLine = resolveRecordedVoiceLine(voiceManifest, response.text);
+        if (recordedLine) {
+          try {
+            await voiceController.play(recordedLine);
+          } catch (voiceError) {
+            console.warn("[Voice] playback failed", voiceError);
+          }
+        }
+      }
     } catch (error) {
       renderMessage("assistant", error instanceof Error ? `AI unavailable: ${error.message}` : "AI unavailable.");
     } finally {
@@ -162,6 +190,7 @@ if (bridge) {
     const settings = await bridge.getSettings();
     const updated = await bridge.updateSettings({ voiceEnabled: !settings.voiceEnabled });
     voiceEnabledButton.textContent = `Voice: ${updated.voiceEnabled ? "on" : "off"}`;
+    if (!updated.voiceEnabled) voiceController.stop();
   });
 } else {
   renderCard("Bridge", "Unavailable", false);
@@ -169,7 +198,7 @@ if (bridge) {
 }
 
 renderCard("WebGL", "Ready", true);
-void loadAvatar();
+void Promise.all([loadAvatar(), loadVoiceManifest()]);
 
 window.addEventListener("beforeunload", () => {
   renderer.setAnimationLoop(null);
