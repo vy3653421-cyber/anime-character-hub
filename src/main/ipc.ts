@@ -48,7 +48,7 @@ export function registerIpcHandlers(version: string): void {
         name: process.env.DESKTOP_MATE_NAME?.trim() || "Desktop Mate",
         personality: process.env.DESKTOP_MATE_PERSONALITY?.trim() || "Helpful, precise, and transparent.",
         responseStyle: "balanced",
-      })
+      }, tools)
     : undefined;
 
   ipcMain.handle(IPC_CHANNELS.getStatus, async () => {
