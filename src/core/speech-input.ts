@@ -4,11 +4,18 @@ export interface SpeechResult {
   isFinal: boolean;
 }
 
+export interface SpeechInputStatus {
+  listening: boolean;
+  supported: boolean;
+  error?: string;
+}
+
 export interface SpeechInput {
   readonly supported: boolean;
-  start(): void;
+  start(): Promise<void>;
   stop(): void;
   isListening(): boolean;
+  status(): SpeechInputStatus;
   onResult(listener: (result: SpeechResult) => void): () => void;
   onError(listener: (error: Error) => void): () => void;
 }
@@ -52,11 +59,12 @@ export class BrowserSpeechInput implements SpeechInput {
   readonly supported: boolean;
   private readonly recognition?: SpeechRecognitionLike;
   private listening = false;
+  private lastError?: string;
   private readonly resultListeners = new Set<(result: SpeechResult) => void>();
   private readonly errorListeners = new Set<(error: Error) => void>();
 
-  constructor(language = "en-IN") {
-    const Constructor = resolveConstructor();
+  constructor(language = "en-IN", recognitionConstructor?: SpeechRecognitionConstructor) {
+    const Constructor = recognitionConstructor ?? resolveConstructor();
     this.supported = Boolean(Constructor);
     if (!Constructor) return;
 
@@ -72,13 +80,20 @@ export class BrowserSpeechInput implements SpeechInput {
     this.recognition = recognition;
   }
 
-  start(): void {
-    if (!this.recognition || this.listening) return;
+  async start(): Promise<void> {
+    if (!this.recognition) {
+      const error = new Error("Speech recognition is not supported in this runtime");
+      this.lastError = error.message;
+      throw error;
+    }
+    if (this.listening) return;
+    this.lastError = undefined;
     try {
       this.recognition.start();
       this.listening = true;
     } catch (error) {
       this.handleError(error);
+      throw error instanceof Error ? error : new Error("Speech recognition failed");
     }
   }
 
@@ -95,6 +110,14 @@ export class BrowserSpeechInput implements SpeechInput {
 
   isListening(): boolean {
     return this.listening;
+  }
+
+  status(): SpeechInputStatus {
+    return {
+      listening: this.listening,
+      supported: this.supported,
+      error: this.lastError,
+    };
   }
 
   onResult(listener: (result: SpeechResult) => void): () => void {
@@ -134,6 +157,7 @@ export class BrowserSpeechInput implements SpeechInput {
       : event instanceof Error
         ? event.message
         : "Speech recognition failed";
+    this.lastError = message;
     this.errorListeners.forEach((listener) => listener(new Error(message)));
     this.listening = false;
   }
