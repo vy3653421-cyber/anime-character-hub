@@ -6,6 +6,7 @@ import { AvatarVoiceController } from "./avatar-voice-controller";
 import { HumanVoicePlayback } from "./human-voice-playback";
 import { validateAvatar } from "./avatar-validator";
 import { resolveRecordedVoiceLine, validateVoiceManifest, type VoiceManifest } from "../core/voice-manifest";
+import { BrowserSpeechInput } from "../core/speech-input";
 
 type DesktopMateSettings = {
   name: string;
@@ -33,7 +34,8 @@ const chatForm = document.querySelector<HTMLFormElement>("#chatForm");
 const chatInput = document.querySelector<HTMLInputElement>("#chatInput");
 const alwaysOnTopButton = document.querySelector<HTMLButtonElement>("#alwaysOnTop");
 const voiceEnabledButton = document.querySelector<HTMLButtonElement>("#voiceEnabled");
-if (!mount || !status || !capabilities || !chatLog || !chatForm || !chatInput || !alwaysOnTopButton || !voiceEnabledButton) throw new Error("Desktop Mate renderer mount failed");
+const microphoneButton = document.querySelector<HTMLButtonElement>("#microphone");
+if (!mount || !status || !capabilities || !chatLog || !chatForm || !chatInput || !alwaysOnTopButton || !voiceEnabledButton || !microphoneButton) throw new Error("Desktop Mate renderer mount failed");
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
@@ -45,6 +47,7 @@ const clock = new THREE.Clock();
 const avatarRuntime = new AvatarRuntime();
 const voicePlayback = new HumanVoicePlayback();
 const voiceController = new AvatarVoiceController(avatarRuntime, voicePlayback);
+const speechInput = new BrowserSpeechInput("en-IN");
 let avatarRoot: THREE.Object3D | undefined;
 let voiceManifest: VoiceManifest | undefined;
 
@@ -143,41 +146,57 @@ const loadVoiceManifest = async () => {
   }
 };
 
+const sendChat = async (text: string) => {
+  const bridge = window.desktopMate;
+  if (!bridge || !text.trim()) return;
+  renderMessage("user", text.trim());
+  try {
+    const response = await bridge.chat(text.trim());
+    renderMessage("assistant", response.text);
+    const settings = await bridge.getSettings();
+    if (settings.voiceEnabled && voiceManifest) {
+      const recordedLine = resolveRecordedVoiceLine(voiceManifest, response.text);
+      if (recordedLine) {
+        try { await voiceController.play(recordedLine); }
+        catch (voiceError) { console.warn("[Voice] playback failed", voiceError); }
+      }
+    }
+  } catch (error) {
+    renderMessage("assistant", error instanceof Error ? `AI unavailable: ${error.message}` : "AI unavailable.");
+  }
+};
+
 const bridge = window.desktopMate;
 if (bridge) {
   void bridge.getSettings().then((settings) => {
     alwaysOnTopButton.textContent = `Always on top: ${settings.alwaysOnTop ? "on" : "off"}`;
     voiceEnabledButton.textContent = `Voice: ${settings.voiceEnabled ? "on" : "off"}`;
+    microphoneButton.textContent = `Mic: ${settings.microphoneEnabled ? "on" : "off"}`;
     renderCard("Settings", "Persistent", true);
   }).catch((error) => console.warn("[Settings] unavailable", error));
+
+  speechInput.onResult((result) => {
+    if (!result.isFinal) return;
+    const transcript = result.transcript.trim();
+    if (!transcript) return;
+    chatInput.value = transcript;
+    void sendChat(transcript);
+    chatInput.value = "";
+  });
+  speechInput.onError((error) => {
+    status.textContent = `Microphone error · ${error.message}`;
+    microphoneButton.textContent = "Mic: error";
+  });
 
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = chatInput.value.trim();
     if (!text) return;
-    renderMessage("user", text);
     chatInput.value = "";
     chatInput.disabled = true;
-    try {
-      const response = await bridge.chat(text);
-      renderMessage("assistant", response.text);
-      const settings = await bridge.getSettings();
-      if (settings.voiceEnabled && voiceManifest) {
-        const recordedLine = resolveRecordedVoiceLine(voiceManifest, response.text);
-        if (recordedLine) {
-          try {
-            await voiceController.play(recordedLine);
-          } catch (voiceError) {
-            console.warn("[Voice] playback failed", voiceError);
-          }
-        }
-      }
-    } catch (error) {
-      renderMessage("assistant", error instanceof Error ? `AI unavailable: ${error.message}` : "AI unavailable.");
-    } finally {
-      chatInput.disabled = false;
-      chatInput.focus();
-    }
+    await sendChat(text);
+    chatInput.disabled = false;
+    chatInput.focus();
   });
 
   alwaysOnTopButton.addEventListener("click", async () => {
@@ -192,15 +211,39 @@ if (bridge) {
     voiceEnabledButton.textContent = `Voice: ${updated.voiceEnabled ? "on" : "off"}`;
     if (!updated.voiceEnabled) voiceController.stop();
   });
+
+  microphoneButton.addEventListener("click", async () => {
+    const settings = await bridge.getSettings();
+    const enable = !settings.microphoneEnabled;
+    if (enable) {
+      try {
+        await speechInput.start();
+        await bridge.updateSettings({ microphoneEnabled: true });
+        microphoneButton.textContent = "Mic: on";
+        status.textContent = "Microphone listening · click Mic to stop";
+      } catch (error) {
+        await bridge.updateSettings({ microphoneEnabled: false });
+        microphoneButton.textContent = "Mic: unavailable";
+        status.textContent = error instanceof Error ? error.message : "Microphone unavailable";
+      }
+    } else {
+      speechInput.stop();
+      await bridge.updateSettings({ microphoneEnabled: false });
+      microphoneButton.textContent = "Mic: off";
+      status.textContent = "Microphone stopped";
+    }
+  });
 } else {
   renderCard("Bridge", "Unavailable", false);
   chatForm.addEventListener("submit", (event) => event.preventDefault());
 }
 
 renderCard("WebGL", "Ready", true);
+renderCard("Microphone", speechInput.status().supported ? "Available on request" : "Unsupported", speechInput.status().supported);
 void Promise.all([loadAvatar(), loadVoiceManifest()]);
 
 window.addEventListener("beforeunload", () => {
+  speechInput.stop();
   renderer.setAnimationLoop(null);
   voiceController.stop();
   avatarRuntime.dispose();
