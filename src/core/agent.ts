@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AssistantConfig } from "./contracts";
-import type { AIProvider, ChatMessage } from "./ai-provider";
+import type { AIProvider, ChatMessage, ChatStreamChunk } from "./ai-provider";
 import { MemoryStore } from "./memory";
 import { ToolOrchestrator, type ToolExecutor } from "./tool-orchestrator";
 
@@ -29,12 +29,10 @@ export class AssistantAgent {
     this.orchestrator = toolExecutor ? new ToolOrchestrator(provider, toolExecutor) : undefined;
   }
 
-  async respond(userText: string): Promise<AgentTurn> {
+  private buildMessages(userText: string): ChatMessage[] {
     const normalizedText = userText.trim();
     if (!normalizedText) throw new Error("Chat text is required");
     if (normalizedText.length > MAX_USER_INPUT_CHARS) throw new Error(`Chat text exceeds ${MAX_USER_INPUT_CHARS} characters`);
-
-    const requestId = randomUUID();
     const memories = this.memory.search(normalizedText).slice(0, 5);
     const memoryContext = memories.length
       ? [
@@ -42,9 +40,7 @@ export class AssistantAgent {
           "<memory_context>",
           ...memories.map((entry) => `<memory>${entry.content}</memory>`),
           "</memory_context>",
-        ].join("\n")
-      : "";
-
+        ].join("\n") : "";
     const system: ChatMessage = {
       role: "system",
       content: [
@@ -57,18 +53,16 @@ export class AssistantAgent {
         memoryContext,
       ].join("\n"),
     };
+    return [system, ...this.history, { role: "user", content: normalizedText }];
+  }
 
-    const messages = [system, ...this.history, { role: "user", content: normalizedText } satisfies ChatMessage];
-    const response = this.orchestrator
-      ? await this.orchestrator.run(messages)
-      : await this.provider.chat({ messages });
-
-    this.history.push({ role: "user", content: normalizedText });
-    this.history.push({ role: "assistant", content: response.text });
-    if (this.history.length > MAX_HISTORY_MESSAGES) {
-      this.history.splice(0, this.history.length - MAX_HISTORY_MESSAGES);
-    }
-
+  async respond(userText: string): Promise<AgentTurn> {
+    const normalizedText = userText.trim();
+    const requestId = randomUUID();
+    const messages = this.buildMessages(normalizedText);
+    const response = this.orchestrator ? await this.orchestrator.run(messages) : await this.provider.chat({ messages });
+    this.history.push({ role: "user", content: normalizedText }, { role: "assistant", content: response.text });
+    if (this.history.length > MAX_HISTORY_MESSAGES) this.history.splice(0, this.history.length - MAX_HISTORY_MESSAGES);
     return {
       requestId,
       text: response.text,
@@ -77,6 +71,31 @@ export class AssistantAgent {
       toolCalls: "toolCalls" in response ? response.toolCalls.length : 0,
       toolResults: "toolResults" in response ? response.toolResults.length : 0,
     };
+  }
+
+  async *streamResponse(userText: string): AsyncIterable<ChatStreamChunk & { requestId: string }> {
+    const normalizedText = userText.trim();
+    const requestId = randomUUID();
+    const messages = this.buildMessages(normalizedText);
+    if (this.orchestrator || !this.provider.stream) {
+      const response = await this.respond(normalizedText);
+      yield { requestId, text: response.text, done: false, model: response.model, provider: response.provider };
+      yield { requestId, text: "", done: true, model: response.model, provider: response.provider };
+      return;
+    }
+    let text = "";
+    let model = "";
+    let provider = this.provider.id;
+    for await (const chunk of this.provider.stream({ messages })) {
+      if (chunk.text) text += chunk.text;
+      model = chunk.model ?? model;
+      provider = chunk.provider ?? provider;
+      yield { ...chunk, requestId };
+    }
+    this.history.push({ role: "user", content: normalizedText }, { role: "assistant", content: text });
+    if (this.history.length > MAX_HISTORY_MESSAGES) this.history.splice(0, this.history.length - MAX_HISTORY_MESSAGES);
+    if (!model) model = "unknown";
+    yield { requestId, text: "", done: true, model, provider };
   }
 
   resetSession(): void {
