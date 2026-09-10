@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { AvatarRuntime } from "./avatar-runtime";
 
 const mount = document.querySelector<HTMLDivElement>("#avatar");
 const status = document.querySelector<HTMLDivElement>("#status");
@@ -15,13 +16,11 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPr
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const clock = new THREE.Clock();
-let mixer: THREE.AnimationMixer | undefined;
-let avatarLoaded = false;
-let activeAction: THREE.AnimationAction | undefined;
+const avatarRuntime = new AvatarRuntime();
+let avatarRoot: THREE.Object3D | undefined;
 
 renderer.setAnimationLoop(() => {
-  const delta = clock.getDelta();
-  if (mixer) mixer.update(delta);
+  avatarRuntime.update(clock.getDelta());
   renderer.render(scene, camera);
 });
 mount.appendChild(renderer.domElement);
@@ -67,16 +66,6 @@ const inspectAvatar = (gltf: GLTF) => {
   return { clips, skinnedMeshes, morphTargets };
 };
 
-const playMatchingClip = (clips: THREE.AnimationClip[], pattern: RegExp) => {
-  const clip = clips.find((candidate) => pattern.test(candidate.name));
-  if (!clip || !mixer) return false;
-  const nextAction = mixer.clipAction(clip);
-  nextAction.reset().fadeIn(0.2).play();
-  activeAction?.fadeOut(0.2);
-  activeAction = nextAction;
-  return true;
-};
-
 const loadAvatar = async () => {
   try {
     const gltf = await new GLTFLoader().loadAsync("/assets/avatar/avatar.glb");
@@ -85,15 +74,15 @@ const loadAvatar = async () => {
     if (report.clips.length === 0) throw new Error("Avatar GLB has no animation clips");
 
     gltf.scene.position.y = -1.05;
-    scene.add(gltf.scene);
-    mixer = new THREE.AnimationMixer(gltf.scene);
-    playMatchingClip(gltf.animations, /idle|breath/i);
-    avatarLoaded = true;
+    avatarRoot = gltf.scene;
+    scene.add(avatarRoot);
+    const runtimeStatus = avatarRuntime.load(avatarRoot, gltf.animations);
+
     status.textContent = `3D avatar loaded · ${report.clips.length} animation clips · ${report.morphTargets} morph targets`;
     renderCard("3D avatar", "Ready", true);
     renderCard("Rig", `${report.skinnedMeshes} skinned mesh${report.skinnedMeshes === 1 ? "" : "es"}`, true);
     renderCard("Animations", `${report.clips.length} verified`, true);
-    renderCard("Face", `${report.morphTargets} morph targets`, report.morphTargets > 0);
+    renderCard("Face", `${runtimeStatus.morphTargetCount} morph targets`, runtimeStatus.morphTargetCount > 0);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown asset error";
     status.textContent = `3D renderer ready · avatar asset unavailable (${message})`;
@@ -109,8 +98,8 @@ void loadAvatar();
 
 window.addEventListener("beforeunload", () => {
   renderer.setAnimationLoop(null);
-  mixer?.stopAllAction();
-  mixer = undefined;
-  activeAction = undefined;
+  avatarRuntime.dispose();
+  if (avatarRoot) scene.remove(avatarRoot);
+  avatarRoot = undefined;
   renderer.dispose();
 });
