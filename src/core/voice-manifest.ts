@@ -12,7 +12,7 @@ export interface VoiceManifest {
 const VALID_VISEMES = new Set(["sil", "A", "E", "I", "O", "U", "M"]);
 
 export function validateVoiceManifest(value: unknown): value is VoiceManifest {
-  if (typeof value !== "object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const manifest = value as Partial<VoiceManifest>;
   if (manifest.version !== 1 || typeof manifest.voiceId !== "string" || !manifest.voiceId.trim()) return false;
   if (typeof manifest.displayName !== "string" || !manifest.displayName.trim()) return false;
