@@ -11,6 +11,22 @@ test("MemoryStore saves and searches entries", () => {
   assert.equal(store.search("preference")[0]?.id, entry.id);
 });
 
+test("MemoryStore matches meaningful words instead of requiring an exact phrase", () => {
+  const store = new MemoryStore();
+  const entry = store.save("The user likes desktop companions", ["project"]);
+
+  assert.equal(store.search("Tell me about desktop companions")[0]?.id, entry.id);
+});
+
+test("MemoryStore ranks exact phrase matches before partial matches", () => {
+  const store = new MemoryStore();
+  const partial = store.save("Desktop companions can run on Windows", ["runtime"]);
+  const exact = store.save("Desktop companions", ["project"]);
+
+  assert.equal(store.search("desktop companions")[0]?.id, exact.id);
+  assert.notEqual(store.search("desktop companions")[1]?.id, partial.id);
+});
+
 test("MemoryStore ignores empty search queries", () => {
   const store = new MemoryStore();
   store.save("hello");
