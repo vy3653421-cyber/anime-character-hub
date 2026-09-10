@@ -46,6 +46,7 @@ The repository does not fake production voice assets. Before enabling spoken res
 
 1. `public/assets/voice/manifest.json` — validated metadata identifying the human voice actor, license, recordings, and optional viseme cues.
 2. The referenced **human-recorded** audio files under `public/assets/voice/`.
+3. Follow [`docs/voice-asset-intake.md`](docs/voice-asset-intake.md) for provenance, recording, attribution, and lip-sync requirements.
 
 Until those recordings exist, the application remains text-first and reports voice as unavailable. The avatar asset is already present and is validated in CI.
 
