@@ -6,5 +6,13 @@ export default defineConfig({
     outDir: "../../dist/renderer",
     emptyOutDir: true,
     target: "es2022",
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ["three"],
+        },
+      },
+    },
   },
 });
