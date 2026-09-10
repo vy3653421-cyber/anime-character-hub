@@ -20,6 +20,7 @@ interface Binding {
   index: number;
   name: AvatarExpressionName;
   lastDelta: number;
+  lastOutput: number;
 }
 
 const patterns: Record<AvatarExpressionName, RegExp[]> = {
@@ -54,7 +55,8 @@ export class AvatarExpressionController {
       for (const [rawName, index] of Object.entries(object.morphTargetDictionary)) {
         const name = this.resolveName(rawName);
         if (!name || index < 0 || index >= object.morphTargetInfluences.length) continue;
-        this.bindings.push({ mesh: object, index, name, lastDelta: 0 });
+        const initial = clamp01(object.morphTargetInfluences[index] ?? 0);
+        this.bindings.push({ mesh: object, index, name, lastDelta: 0, lastOutput: initial });
       }
     });
 
@@ -90,10 +92,14 @@ export class AvatarExpressionController {
       const influences = binding.mesh.morphTargetInfluences;
       if (!influences) continue;
 
-      influences[binding.index] = clamp01(influences[binding.index] - binding.lastDelta);
-      const deltaValue = this.current[binding.name];
-      influences[binding.index] = clamp01(influences[binding.index] + deltaValue);
-      binding.lastDelta = deltaValue;
+      const observed = clamp01(influences[binding.index] ?? 0);
+      const sameAsLastOutput = Math.abs(observed - binding.lastOutput) < 0.0001;
+      const base = sameAsLastOutput ? clamp01(observed - binding.lastDelta) : observed;
+      const output = clamp01(base + this.current[binding.name]);
+
+      influences[binding.index] = output;
+      binding.lastDelta = output - base;
+      binding.lastOutput = output;
     }
   }
 
