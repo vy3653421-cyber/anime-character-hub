@@ -43,13 +43,18 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Verify web entrypoint
+        run: |
+          test -s dist/renderer/index.html
+          test -s dist/renderer/assets/avatar/avatar.glb
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./dist
+          path: ./dist/renderer
 
   deploy:
     needs: build
