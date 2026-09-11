@@ -32,21 +32,35 @@ while (offset + 8 <= buffer.length) {
 
 if (!gltf) throw new Error("GLB has no JSON chunk");
 
-const animations = (gltf.animations ?? []).map((a) => a.name).filter(Boolean);
-const nodes = (gltf.nodes ?? []).map((n) => n.name).filter(Boolean);
+const animations = gltf.animations ?? [];
+const animationNames = animations.map((a) => a.name).filter(Boolean);
+const nodes = gltf.nodes ?? [];
 const skins = gltf.skins ?? [];
 const meshes = gltf.meshes ?? [];
 const morphTargetMeshes = meshes.filter((m) => (m.primitives ?? []).some((p) => Array.isArray(p.targets) && p.targets.length > 0));
 const requiredAnimations = ["idle", "breathing", "blink", "talking", "happy", "surprised", "concerned", "thinking", "sleeping"];
-const missingAnimations = requiredAnimations.filter((name) => !animations.some((actual) => actual.toLowerCase() === name));
+const missingAnimations = requiredAnimations.filter((name) => !animationNames.some((actual) => actual.toLowerCase() === name));
 const requiredBones = ["root", "spine", "head", "hair_left", "hair_right", "ribbon_left", "ribbon_right"];
-const missingBones = requiredBones.filter((name) => !nodes.includes(name));
+const missingBones = requiredBones.filter((name) => !nodes.some((node) => node.name === name));
+const animationProblems = animations.flatMap((animation) => {
+  const channels = animation.channels ?? [];
+  if (!channels.length) return [`${animation.name ?? "<unnamed>"}: no animation channels`];
+  return channels.flatMap((channel) => {
+    const target = channel.target ?? {};
+    const problems = [];
+    if (!Number.isInteger(target.node) || !nodes[target.node]) problems.push("invalid target node");
+    if (!["translation", "rotation", "scale", "weights"].includes(target.path)) problems.push("invalid target path");
+    if (!Number.isInteger(channel.sampler) || !(animation.samplers ?? [])[channel.sampler]) problems.push("invalid sampler");
+    return problems.length ? [`${animation.name ?? "<unnamed>"}: ${problems.join(", ")}`] : [];
+  });
+});
 
 const failures = [];
 if (skins.length === 0) failures.push("No glTF skin found");
 if (meshes.length === 0) failures.push("No glTF meshes found");
 if (morphTargetMeshes.length === 0) failures.push("No morph-target mesh found");
 if (missingAnimations.length) failures.push(`Missing animations: ${missingAnimations.join(", ")}`);
+if (animationProblems.length) failures.push(`Invalid animation channels: ${animationProblems.join(" | ")}`);
 if (missingBones.length) failures.push(`Missing rig nodes: ${missingBones.join(", ")}`);
 
 console.log(JSON.stringify({
@@ -56,7 +70,7 @@ console.log(JSON.stringify({
   meshes: meshes.length,
   skins: skins.length,
   morphTargetMeshes: morphTargetMeshes.length,
-  animations,
+  animations: animationNames,
   missingAnimations,
   missingBones,
 }, null, 2));
