@@ -1,4 +1,5 @@
 import "./chat-stream-ui";
+import "./companion-integration";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -193,9 +194,12 @@ const loadTools = async (bridge: DesktopMateBridge) => {
         }
         button.disabled = true;
         try {
+          window.dispatchEvent(new CustomEvent("desktop-mate:task-started", { detail: { toolId: tool.id } }));
           const result = await bridge.executeTool({ toolId: tool.id, confirmed: needsConfirmation });
+          window.dispatchEvent(new CustomEvent(result.ok ? "desktop-mate:task-completed" : "desktop-mate:task-failed", { detail: { toolId: tool.id, result } }));
           status.textContent = result.ok ? `Action completed · ${tool.id}` : `Action blocked · ${result.reason || "permission denied"}`;
         } catch (error) {
+          window.dispatchEvent(new CustomEvent("desktop-mate:task-failed", { detail: { toolId: tool.id } }));
           status.textContent = `Action failed · ${error instanceof Error ? error.message : "unknown error"}`;
         } finally {
           button.disabled = false;
@@ -217,6 +221,7 @@ const sendChat = async (text: string) => {
   try {
     const response = await bridge.chat(text.trim());
     renderMessage("assistant", response.text);
+    window.dispatchEvent(new CustomEvent("desktop-mate:assistant-response", { detail: { text: response.text } }));
     const settings = await bridge.getSettings();
     if (settings.voiceEnabled && getVoiceAvailability(voiceManifest) === "ready" && voiceManifest) {
       const recordedLine = resolveRecordedVoiceLine(voiceManifest, response.text);
@@ -227,6 +232,7 @@ const sendChat = async (text: string) => {
     }
   } catch (error) {
     renderMessage("assistant", error instanceof Error ? `AI unavailable: ${error.message}` : "AI unavailable.");
+    window.dispatchEvent(new CustomEvent("desktop-mate:task-failed", { detail: { source: "chat", error } }));
   }
 };
 
