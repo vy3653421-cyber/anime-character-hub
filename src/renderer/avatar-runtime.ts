@@ -20,6 +20,12 @@ export interface AvatarRuntimeStatus {
 
 const SECONDARY_BONE_PATTERN = /(hair|ribbon|accessory|tail|cloth|skirt|ear|ponytail|bang)/i;
 
+declare global {
+  interface Window {
+    desktopMateAvatarRuntime?: AvatarRuntime;
+  }
+}
+
 export class AvatarRuntime {
   private readonly controller = new AvatarAnimationController();
   private readonly expressions = new AvatarExpressionController();
@@ -35,6 +41,10 @@ export class AvatarRuntime {
   private state: AvatarState = "idle";
   private intensity = 1;
   private activeClip?: string;
+
+  constructor() {
+    if (typeof window !== "undefined") window.desktopMateAvatarRuntime = this;
+  }
 
   load(root: THREE.Object3D, clips: THREE.AnimationClip[]): AvatarRuntimeStatus {
     this.dispose();
@@ -122,6 +132,7 @@ export class AvatarRuntime {
     this.physics.clear();
     this.lipSync.stop();
     this.expressions.clearExpressions();
+    if (typeof window !== "undefined" && window.desktopMateAvatarRuntime === this) delete window.desktopMateAvatarRuntime;
   }
 
   private applyState(state: AvatarState, intensity: number): void {
