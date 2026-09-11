@@ -163,16 +163,18 @@ for action in actions:
     track.name = action.name
     track.mute = False
     track.is_solo = False
-    strip = track.strips.new(action.name, action.frame_range[0], action)
-    strip.action_frame_start = action.frame_range[0]
-    strip.action_frame_end = action.frame_range[1]
-    strip.frame_start = action.frame_range[0]
-    strip.frame_end = action.frame_range[1]
+    action_start = int(action.frame_range[0])
+    action_end = int(action.frame_range[1])
+    strip = track.strips.new(action.name, action_start, action)
+    strip.action_frame_start = action_start
+    strip.action_frame_end = action_end
+    strip.frame_start = action_start
+    strip.frame_end = action_end
     strip.extrapolation = 'NOTHING'
 
 print('Desktop Mate skin bindings:', [(o.name, any(m.type == 'ARMATURE' and m.object == arm for m in o.modifiers), len(o.vertex_groups)) for o in parts if o.type == 'MESH'])
 print('Desktop Mate NLA tracks:', [(track.name, len(track.strips), track.mute) for track in arm.animation_data.nla_tracks])
-print('Desktop Mate actions:', [action.name for action in actions])
+print('Desktop Mate actions:', [(action.name, len(action.fcurves), tuple(action.frame_range)) for action in actions])
 
 arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
