@@ -38,7 +38,7 @@ def uv(name, loc, scale, material, seg=32, rings=16):
 
 def cyl(name, loc, radius, depth, material, scale=(1, 1, 1)):
     bpy.ops.object.select_all(action='DESELECT')
-    bpy.ops.object.primitive_cylinder_add(vertices=32, radius=radius, depth=depth, location=loc)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=radius, depth=depth, location=loc)
     o = bpy.context.object
     o.name = name
     o.scale = scale
