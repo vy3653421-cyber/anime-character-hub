@@ -14,11 +14,13 @@ if (!existsSync(entry)) throw new Error(`Built Electron entry is missing: ${entr
 if (!existsSync(electronBinary)) throw new Error(`Electron binary is missing: ${electronBinary}`);
 
 const electronArgs = ["."];
-if (process.platform === "linux") electronArgs.unshift("--no-sandbox");
+if (process.platform === "linux") {
+  electronArgs.unshift("--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader");
+}
 
 const child = spawn(electronBinary, electronArgs, {
   cwd: process.cwd(),
-  env: { ...process.env, DESKTOP_MATE_SMOKE: "1", ELECTRON_DISABLE_GPU: "1" },
+  env: { ...process.env, DESKTOP_MATE_SMOKE: "1" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 
