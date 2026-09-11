@@ -84,7 +84,7 @@ for x in (-0.32, 0.32):
 for x in (-0.78, 0.78):
     uv('Ribbon', (x, 2.88, 0.22), (0.16, 0.45, 0.11), cloth2, 16, 10)
 
-# Rig with explicit runtime physics bones.
+# Rig with explicit deform bones.
 bpy.ops.object.select_all(action='DESELECT')
 bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
 arm = bpy.context.object
@@ -106,13 +106,12 @@ for bone_name, bone_head, bone_tail, parent_name in [
     bone.head = bone_head
     bone.tail = bone_tail
     bone.parent = arm.data.edit_bones.get(parent_name)
-bpy.ops.object.mode_set(mode='POSE')
-for pose_bone in arm.pose.bones:
-    pose_bone.rotation_mode = 'XYZ'
 bpy.ops.object.mode_set(mode='OBJECT')
+for bone in arm.data.bones:
+    bone.use_deform = True
 
-# Bind every mesh explicitly to the armature. A real glTF skin requires
-# an Armature modifier plus JOINTS_0/WEIGHTS_0 data on the exported primitive.
+# Bind every mesh explicitly to the armature. The modifier and matching vertex
+# group force the glTF exporter to emit JOINTS_0/WEIGHTS_0 and a skin reference.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
@@ -123,7 +122,7 @@ for mesh_object in parts:
     group = mesh_object.vertex_groups.get('root') or mesh_object.vertex_groups.new(name='root')
     group.add(list(range(len(mesh_object.data.vertices))), 1.0, 'REPLACE')
     mesh_object.parent = arm
-    mesh_object.parent_type = 'OBJECT'
+    mesh_object.parent_type = 'ARMATURE'
 
 # Facial shape keys expected by the runtime.
 head_mesh.shape_key_add(name='Basis')
@@ -162,9 +161,9 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# Keep actions in NLA for Blender editing, but export the Action library
-# directly. Blender 4.0's NLA export path can omit these generated tracks.
-arm.animation_data_clear()
+# Keep the animation library attached to the armature through NLA. Do not call
+# animation_data_clear(): that removes the armature's animation container and
+# makes Blender 4.x ACTIONS export omit the generated clips.
 arm.animation_data_create()
 for action in actions:
     track = arm.animation_data.nla_tracks.new()
@@ -177,7 +176,8 @@ arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
 arm['assetNote'] = 'Procedural anime-style starter. Artist refinement and final licensed approval required before production release.'
 
-# Export the complete character hierarchy and the animation library.
+# Export the complete character hierarchy, real skin bindings, morph targets,
+# and all named NLA clips.
 bpy.ops.object.select_all(action='DESELECT')
 for mesh_object in parts:
     mesh_object.select_set(True)
@@ -191,12 +191,13 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='ACTIONS',
+    export_animation_mode='NLA_TRACKS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
     export_influence_nb=4,
     export_morph=True,
     export_morph_animation=True,
+    export_nla_strips=True,
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
