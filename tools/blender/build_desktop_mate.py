@@ -196,7 +196,7 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='NLA_TRACKS',
+    export_animation_mode='ACTIONS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
