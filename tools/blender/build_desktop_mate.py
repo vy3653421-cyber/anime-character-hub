@@ -151,21 +151,32 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# Export the animation library as explicit NLA tracks. This is intentionally
-# used instead of ACTIONS mode because the CI runner's Blender build has
-# previously produced an animation-less GLB when ACTIONS was selected even
-# though the actions were present in Blender. Each action gets its own track,
-# which is directly supported by the glTF NLA Tracks exporter.
+# Blender 4.0's glTF exporter is most reliable for an animation library when
+# each Action is explicitly stashed on its own NLA track, while exporting in
+# ACTIONS mode. Keep the NLA strips as the Action association and enable NLA
+# evaluation before export. This mirrors the exporter documentation's
+# supported animation-library workflow.
 arm.animation_data_create()
+arm.animation_data.action = None
+arm.animation_data.use_nla = True
+for track in list(arm.animation_data.nla_tracks):
+    arm.animation_data.nla_tracks.remove(track)
 for action in actions:
     track = arm.animation_data.nla_tracks.new()
     track.name = action.name
-    strip = track.strips.new(action.name, 1, action)
+    track.mute = False
+    track.is_solo = False
+    strip = track.strips.new(action.name, action.frame_range[0], action)
     strip.action_frame_start = action.frame_range[0]
     strip.action_frame_end = action.frame_range[1]
     strip.frame_start = action.frame_range[0]
     strip.frame_end = action.frame_range[1]
     strip.extrapolation = 'NOTHING'
+
+# Export-time diagnostics make the CI failure actionable if Blender changes
+# its NLA/action semantics again.
+print('Desktop Mate NLA tracks:', [(track.name, len(track.strips), track.mute) for track in arm.animation_data.nla_tracks])
+print('Desktop Mate actions:', [action.name for action in actions])
 
 arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
@@ -186,7 +197,7 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='NLA_TRACKS',
+    export_animation_mode='ACTIONS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
