@@ -38,7 +38,7 @@ def uv(name, loc, scale, material, seg=32, rings=16):
 
 def cyl(name, loc, radius, depth, material, scale=(1, 1, 1)):
     bpy.ops.object.select_all(action='DESELECT')
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=radius, depth=depth, location=loc)
+    bpy.ops.object.primitive_cylinder_add(vertices=32, radius=radius, depth=depth, location=loc)
     o = bpy.context.object
     o.name = name
     o.scale = scale
@@ -104,6 +104,9 @@ bpy.ops.object.mode_set(mode='OBJECT')
 for bone in arm.data.bones:
     bone.use_deform = True
 
+# Keep the Armature modifier + vertex groups as the sole skin binding.
+# Do NOT parent meshes to the armature object: glTF export can drop JOINTS_0/
+# WEIGHTS_0 for armature-parented meshes. The exporter expects the modifier.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
@@ -113,8 +116,6 @@ for mesh_object in parts:
     modifier.use_bone_envelopes = False
     group = mesh_object.vertex_groups.get('root') or mesh_object.vertex_groups.new(name='root')
     group.add(list(range(len(mesh_object.data.vertices))), 1.0, 'REPLACE')
-    mesh_object.parent = arm
-    mesh_object.parent_type = 'ARMATURE'
 
 head_mesh.shape_key_add(name='Basis')
 smile = head_mesh.shape_key_add(name='smile')
@@ -137,6 +138,7 @@ def action_rot(name, bone_name, frames, angles):
         pose_bone.rotation_euler = rotation
         pose_bone.keyframe_insert('rotation_euler', frame=frame)
     arm.animation_data.action = None
+    action.use_fake_user = True
     return action
 
 actions = [
@@ -151,11 +153,6 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# Blender 4.0's glTF exporter is most reliable for an animation library when
-# each Action is explicitly stashed on its own NLA track, while exporting in
-# ACTIONS mode. Keep the NLA strips as the Action association and enable NLA
-# evaluation before export. This mirrors the exporter documentation's
-# supported animation-library workflow.
 arm.animation_data_create()
 arm.animation_data.action = None
 arm.animation_data.use_nla = True
@@ -173,8 +170,7 @@ for action in actions:
     strip.frame_end = action.frame_range[1]
     strip.extrapolation = 'NOTHING'
 
-# Export-time diagnostics make the CI failure actionable if Blender changes
-# its NLA/action semantics again.
+print('Desktop Mate skin bindings:', [(o.name, any(m.type == 'ARMATURE' and m.object == arm for m in o.modifiers), len(o.vertex_groups)) for o in parts if o.type == 'MESH'])
 print('Desktop Mate NLA tracks:', [(track.name, len(track.strips), track.mute) for track in arm.animation_data.nla_tracks])
 print('Desktop Mate actions:', [action.name for action in actions])
 
