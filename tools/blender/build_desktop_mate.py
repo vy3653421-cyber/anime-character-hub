@@ -171,9 +171,7 @@ arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
 arm['assetNote'] = 'Procedural anime-style starter. Artist refinement and final licensed approval required before production release.'
 
-# Export the complete character hierarchy, not only the armature. The previous
-# export selected just the armature, which could leave the generated GLB with a
-# skin definition but no mesh nodes actually bound to it in Three.js.
+# Export the complete character hierarchy and the animation library.
 bpy.ops.object.select_all(action='DESELECT')
 for mesh_object in parts:
     mesh_object.select_set(True)
@@ -185,7 +183,12 @@ bpy.ops.export_scene.gltf(
     export_format='GLB',
     use_selection=True,
     export_animations=True,
+    export_animation_mode='NLA_TRACKS',
+    export_force_sampling=True,
+    export_optimize_animation_size=False,
     export_skins=True,
     export_morph=True,
+    export_morph_animation=True,
+    export_nla_strips=True,
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
