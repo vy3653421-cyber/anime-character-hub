@@ -42,7 +42,10 @@ const installChatStreaming = () => {
     cancelButton.hidden = !busy;
   };
 
-  const finish = (message: string) => {
+  const finish = (message: string, cancelled = false) => {
+    if (!cancelled && accumulated.trim()) {
+      window.dispatchEvent(new CustomEvent("desktop-mate:assistant-response", { detail: { text: accumulated } }));
+    }
     activeRequestId = undefined;
     setBusy(false);
     status.textContent = message;
@@ -57,7 +60,7 @@ const installChatStreaming = () => {
       assistantBubble.textContent = accumulated;
       log.scrollTop = log.scrollHeight;
     }
-    if (chunk.done) finish(chunk.cancelled ? "AI response cancelled" : "AI response complete");
+    if (chunk.done) finish(chunk.cancelled ? "AI response cancelled" : "AI response complete", Boolean(chunk.cancelled));
   });
 
   cancelButton.addEventListener("click", () => {
@@ -67,13 +70,17 @@ const installChatStreaming = () => {
     void bridge.cancelChatStream(requestId).catch(() => undefined);
   });
 
+  // renderer.ts also owns the legacy non-streaming submit path. Capture here so the
+  // streaming path is the single source of truth instead of sending two AI requests.
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (activeRequestId) return;
 
     const text = input.value.trim();
     if (!text) return;
 
+    window.dispatchEvent(new Event("desktop-mate:user-message"));
     appendMessage("user", text);
     input.value = "";
     setBusy(true);
@@ -93,7 +100,7 @@ const installChatStreaming = () => {
       status.textContent = "AI request failed";
       input.focus();
     }
-  });
+  }, true);
 };
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installChatStreaming, { once: true });
