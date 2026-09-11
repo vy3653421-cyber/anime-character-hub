@@ -151,10 +151,11 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# Each action is stashed on its own NLA track. Blender 4.0's glTF Actions
-# exporter treats these as the portable animation library; unlike a naked
-# action with zero users, a stashed action is guaranteed to be associated with
-# the selected armature.
+# Export the animation library as explicit NLA tracks. This is intentionally
+# used instead of ACTIONS mode because the CI runner's Blender build has
+# previously produced an animation-less GLB when ACTIONS was selected even
+# though the actions were present in Blender. Each action gets its own track,
+# which is directly supported by the glTF NLA Tracks exporter.
 arm.animation_data_create()
 for action in actions:
     track = arm.animation_data.nla_tracks.new()
@@ -185,12 +186,13 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='ACTIONS',
+    export_animation_mode='NLA_TRACKS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
     export_influence_nb=4,
     export_morph=True,
     export_morph_animation=True,
+    export_nla_strips=True,
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
