@@ -43,11 +43,12 @@ export class AvatarRuntime {
   private activeClip?: string;
 
   constructor() {
-    if (typeof window !== "undefined") window.desktopMateAvatarRuntime = this;
+    this.expose();
   }
 
   load(root: THREE.Object3D, clips: THREE.AnimationClip[]): AvatarRuntimeStatus {
     this.dispose();
+    this.expose();
     this.root = root;
     this.clips = clips;
     this.mixer = new THREE.AnimationMixer(root);
@@ -133,6 +134,10 @@ export class AvatarRuntime {
     this.lipSync.stop();
     this.expressions.clearExpressions();
     if (typeof window !== "undefined" && window.desktopMateAvatarRuntime === this) delete window.desktopMateAvatarRuntime;
+  }
+
+  private expose(): void {
+    if (typeof window !== "undefined") window.desktopMateAvatarRuntime = this;
   }
 
   private applyState(state: AvatarState, intensity: number): void {
