@@ -104,9 +104,8 @@ bpy.ops.object.mode_set(mode='OBJECT')
 for bone in arm.data.bones:
     bone.use_deform = True
 
-# Keep the Armature modifier + vertex groups as the sole skin binding.
-# Do NOT parent meshes to the armature object: glTF export can drop JOINTS_0/
-# WEIGHTS_0 for armature-parented meshes. The exporter expects the modifier.
+# Use an Armature modifier for deformation and parent the meshes to the armature
+# object so Blender's glTF exporter recognizes the skin hierarchy reliably.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
@@ -116,6 +115,8 @@ for mesh_object in parts:
     modifier.use_bone_envelopes = False
     group = mesh_object.vertex_groups.get('root') or mesh_object.vertex_groups.new(name='root')
     group.add(list(range(len(mesh_object.data.vertices))), 1.0, 'REPLACE')
+    mesh_object.parent = arm
+    mesh_object.parent_type = 'OBJECT'
 
 head_mesh.shape_key_add(name='Basis')
 smile = head_mesh.shape_key_add(name='smile')
@@ -172,7 +173,7 @@ for action in actions:
     strip.frame_end = action_end
     strip.extrapolation = 'NOTHING'
 
-print('Desktop Mate skin bindings:', [(o.name, any(m.type == 'ARMATURE' and m.object == arm for m in o.modifiers), len(o.vertex_groups)) for o in parts if o.type == 'MESH'])
+print('Desktop Mate skin bindings:', [(o.name, any(m.type == 'ARMATURE' and m.object == arm for m in o.modifiers), o.parent == arm, len(o.vertex_groups)) for o in parts if o.type == 'MESH'])
 print('Desktop Mate NLA tracks:', [(track.name, len(track.strips), track.mute) for track in arm.animation_data.nla_tracks])
 print('Desktop Mate actions:', [(action.name, len(action.fcurves), tuple(action.frame_range)) for action in actions])
 
@@ -195,7 +196,7 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='ACTIONS',
+    export_animation_mode='NLA_TRACKS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
