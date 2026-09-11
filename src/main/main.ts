@@ -42,8 +42,32 @@ const openMainWindow = () => {
 
         if (!visible || !validBounds || !loadedRenderer) {
           console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", {
+            reason: "window/renderer did not initialize",
             visible,
             bounds,
+            loadedUrl,
+          });
+          quitting = true;
+          app.exit(1);
+          return;
+        }
+
+        const rendererState = await window.webContents.executeJavaScript(`(() => {
+          const status = document.querySelector("#status")?.textContent ?? "";
+          const capabilityCount = document.querySelectorAll("#capabilities .card").length;
+          const rendererScript = Array.from(document.scripts).some((script) => script.type === "module");
+          return {
+            status,
+            capabilityCount,
+            rendererScript,
+            initialized: capabilityCount > 0 && status !== "Initializing runtime…",
+          };
+        })()`);
+
+        if (!rendererState.initialized) {
+          console.error("DESKTOP_MATE_RUNTIME_QA_FAILED", {
+            reason: "renderer JavaScript did not initialize",
+            rendererState,
             loadedUrl,
           });
           quitting = true;
@@ -75,6 +99,7 @@ const openMainWindow = () => {
           width: bounds.width,
           height: bounds.height,
           loadedRenderer,
+          rendererState,
         });
         console.log("DESKTOP_MATE_SMOKE_OK");
         quitting = true;
