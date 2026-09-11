@@ -111,14 +111,19 @@ for pose_bone in arm.pose.bones:
     pose_bone.rotation_mode = 'XYZ'
 bpy.ops.object.mode_set(mode='OBJECT')
 
+# Bind every mesh explicitly to the armature. A real glTF skin requires
+# an Armature modifier plus JOINTS_0/WEIGHTS_0 data on the exported primitive.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
     modifier = mesh_object.modifiers.new('Armature', 'ARMATURE')
     modifier.object = arm
-    group = mesh_object.vertex_groups.new(name='root')
+    modifier.use_vertex_groups = True
+    modifier.use_bone_envelopes = False
+    group = mesh_object.vertex_groups.get('root') or mesh_object.vertex_groups.new(name='root')
     group.add(list(range(len(mesh_object.data.vertices))), 1.0, 'REPLACE')
     mesh_object.parent = arm
+    mesh_object.parent_type = 'OBJECT'
 
 # Facial shape keys expected by the runtime.
 head_mesh.shape_key_add(name='Basis')
@@ -157,15 +162,16 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# NLA tracks keep all named clips available to glTF export.
+# Keep actions in NLA for Blender editing, but export the Action library
+# directly. Blender 4.0's NLA export path can omit these generated tracks.
+arm.animation_data_clear()
+arm.animation_data_create()
 for action in actions:
-    track = arm.animation_data_create().nla_tracks.new()
+    track = arm.animation_data.nla_tracks.new()
     track.name = action.name
     strip = track.strips.new(action.name, 1, action)
-    strip.action_frame_start = 1
-    strip.action_frame_end = max(60, int(action.frame_range[1]))
-    strip.repeat = 1
-arm.animation_data.action = None
+    strip.action_frame_start = action.frame_range[0]
+    strip.action_frame_end = action.frame_range[1]
 
 arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
@@ -183,12 +189,14 @@ bpy.ops.export_scene.gltf(
     export_format='GLB',
     use_selection=True,
     export_animations=True,
-    export_animation_mode='NLA_TRACKS',
+    export_anim_single_armature=True,
+    export_reset_pose_bones=True,
+    export_animation_mode='ACTIONS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
+    export_influence_nb=4,
     export_morph=True,
     export_morph_animation=True,
-    export_nla_strips=True,
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
