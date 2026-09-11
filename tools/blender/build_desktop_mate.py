@@ -26,6 +26,7 @@ shoe = mat('Shoes', (0.035, 0.04, 0.07), 0, 0.35)
 
 parts = []
 def uv(name, loc, scale, material, seg=32, rings=16):
+    bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.mesh.primitive_uv_sphere_add(segments=seg, ring_count=rings, location=loc)
     o = bpy.context.object
     o.name = name
@@ -36,6 +37,7 @@ def uv(name, loc, scale, material, seg=32, rings=16):
     return o
 
 def cyl(name, loc, radius, depth, material, scale=(1, 1, 1)):
+    bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=radius, depth=depth, location=loc)
     o = bpy.context.object
     o.name = name
@@ -46,6 +48,7 @@ def cyl(name, loc, radius, depth, material, scale=(1, 1, 1)):
     return o
 
 def cone(name, loc, r1, r2, depth, material):
+    bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=r1, radius2=r2, depth=depth, location=loc)
     o = bpy.context.object
     o.name = name
@@ -82,6 +85,7 @@ for x in (-0.78, 0.78):
     uv('Ribbon', (x, 2.88, 0.22), (0.16, 0.45, 0.11), cloth2, 16, 10)
 
 # Rig with explicit runtime physics bones.
+bpy.ops.object.select_all(action='DESELECT')
 bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
 arm = bpy.context.object
 arm.name = 'DesktopMateRig'
@@ -167,12 +171,15 @@ arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
 arm['assetNote'] = 'Procedural anime-style starter. Artist refinement and final licensed approval required before production release.'
 
-bpy.context.view_layer.objects.active = arm
-arm.select_set(True)
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'desktop_mate_character.blend'))
+# Export the complete character hierarchy, not only the armature. The previous
+# export selected just the armature, which could leave the generated GLB with a
+# skin definition but no mesh nodes actually bound to it in Three.js.
 bpy.ops.object.select_all(action='DESELECT')
+for mesh_object in parts:
+    mesh_object.select_set(True)
 arm.select_set(True)
 bpy.context.view_layer.objects.active = arm
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'desktop_mate_character.blend'))
 bpy.ops.export_scene.gltf(
     filepath=os.path.join(OUT, 'avatar.glb'),
     export_format='GLB',
