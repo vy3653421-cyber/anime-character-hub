@@ -18,12 +18,32 @@ const required = ["idle", "breathing", "blink", "talking", "thinking", "happy", 
 const missing = required.filter((name) => !animations.has(name));
 const meshes = json.meshes ?? [];
 const skins = json.skins ?? [];
+const nodes = json.nodes ?? [];
 const morphTargets = meshes.reduce((count, mesh) => count + (mesh.primitives ?? []).reduce((n, primitive) => n + ((primitive.targets ?? []).length > 0 ? 1 : 0), 0), 0);
+const skinnedNodes = nodes.filter((node) => Number.isInteger(node.mesh) && Number.isInteger(node.skin));
+const skinnedPrimitives = meshes.reduce((count, mesh) => count + (mesh.primitives ?? []).reduce((n, primitive) => {
+  const attributes = primitive.attributes ?? {};
+  return n + (Number.isInteger(attributes.JOINTS_0) && Number.isInteger(attributes.WEIGHTS_0) ? 1 : 0);
+}, 0), 0);
+const validSkinJoints = skins.reduce((count, skin) => count + ((skin.joints ?? []).filter((joint) => Number.isInteger(joint) && nodes[joint]).length > 0 ? 1 : 0), 0);
 
-if (!json.scenes?.length || !json.nodes?.length) throw new Error("GLB has no scene/nodes");
+if (!json.scenes?.length || !nodes.length) throw new Error("GLB has no scene/nodes");
 if (!skins.length) throw new Error("GLB has no skin/armature");
 if (!animations.length) throw new Error("GLB has no animations");
 if (missing.length) throw new Error(`Missing semantic animations: ${missing.join(", ")}`);
 if (!morphTargets) throw new Error("GLB has no morph-target primitives");
+if (!skinnedNodes.length) throw new Error("GLB has no mesh node referencing a skin");
+if (!skinnedPrimitives) throw new Error("GLB has no primitive with JOINTS_0 and WEIGHTS_0");
+if (!validSkinJoints) throw new Error("GLB skin has no valid joint nodes");
 
-console.log(JSON.stringify({ file: path.normalize(file), bytes: data.length, nodes: json.nodes.length, skins: skins.length, animations: animations.size, morphTargetPrimitives: morphTargets }, null, 2));
+console.log(JSON.stringify({
+  file: path.normalize(file),
+  bytes: data.length,
+  nodes: nodes.length,
+  meshes: meshes.length,
+  skins: skins.length,
+  skinnedNodes: skinnedNodes.length,
+  skinnedPrimitives,
+  animations: animations.size,
+  morphTargetPrimitives: morphTargets,
+}, null, 2));
