@@ -105,7 +105,6 @@ for bone in arm.data.bones:
     bone.use_deform = True
 
 # Use Blender's actual Armature parenting relationship plus the Armature modifier.
-# The glTF exporter checks for an armature parent with ARMATURE parent type.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
@@ -205,6 +204,5 @@ bpy.ops.export_scene.gltf(
     export_morph=True,
     export_morph_animation=True,
     export_nla_strips=True,
-    export_merge_animation='NONE',
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
