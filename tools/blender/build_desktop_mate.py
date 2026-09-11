@@ -56,24 +56,19 @@ def cone(name, loc, r1, r2, depth, material):
     parts.append(o)
     return o
 
-# Body and outfit.
 cyl('Body', (0, 2.05, 0), 0.68, 1.45, cloth, scale=(1, 1, 0.72))
 cone('Skirt', (0, 1.15, 0), 1.0, 0.68, 0.65, cloth)
 uv('Collar', (0, 2.72, -0.01), (0.34, 0.16, 0.28), cloth2)
-
-# Face and hair.
 head_mesh = uv('Head', (0, 3.55, 0), (0.84, 0.92, 0.78), skin)
 uv('HairCap', (0, 3.82, 0.06), (0.91, 0.99, 0.84), hair, 40, 20)
 for x in (-0.72, 0.72):
     uv('HairLock', (x, 3.22, 0.05), (0.25, 0.68, 0.30), hair)
 uv('HairBack', (0, 3.22, 0.35), (0.76, 0.9, 0.45), hair)
-
 for x in (-0.29, 0.29):
     uv('Eye', (x, 3.58, -0.73), (0.20, 0.27, 0.07), eye, 24, 12)
     uv('Pupil', (x, 3.58, -0.795), (0.085, 0.15, 0.035), dark, 20, 10)
     uv('EyeHighlight', (x - 0.035, 3.66, -0.83), (0.025, 0.045, 0.012), cloth2, 12, 8)
 uv('Mouth', (0, 3.25, -0.775), (0.14, 0.045, 0.025), dark, 16, 8)
-
 for x in (-0.88, 0.88):
     a = cyl('Arm', (x, 2.0, 0), 0.17, 1.35, cloth)
     a.rotation_euler[1] = math.radians(-8 * x)
@@ -84,7 +79,6 @@ for x in (-0.32, 0.32):
 for x in (-0.78, 0.78):
     uv('Ribbon', (x, 2.88, 0.22), (0.16, 0.45, 0.11), cloth2, 16, 10)
 
-# Rig with explicit deform bones.
 bpy.ops.object.select_all(action='DESELECT')
 bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
 arm = bpy.context.object
@@ -110,8 +104,6 @@ bpy.ops.object.mode_set(mode='OBJECT')
 for bone in arm.data.bones:
     bone.use_deform = True
 
-# Bind every mesh explicitly to the armature. The modifier and matching vertex
-# group force the glTF exporter to emit JOINTS_0/WEIGHTS_0 and a skin reference.
 for mesh_object in parts:
     if mesh_object.type != 'MESH':
         continue
@@ -124,7 +116,6 @@ for mesh_object in parts:
     mesh_object.parent = arm
     mesh_object.parent_type = 'ARMATURE'
 
-# Facial shape keys expected by the runtime.
 head_mesh.shape_key_add(name='Basis')
 smile = head_mesh.shape_key_add(name='smile')
 blink = head_mesh.shape_key_add(name='blink')
@@ -137,7 +128,6 @@ for index, vertex in enumerate(head_mesh.data.vertices):
     if abs(co.x) < 0.65 and co.y > 0.1:
         blink.data[index].co.y *= 0.88
 
-# Named motion clips.
 def action_rot(name, bone_name, frames, angles):
     action = bpy.data.actions.new(name)
     arm.animation_data_create()
@@ -161,9 +151,10 @@ actions = [
     action_rot('sleeping', 'head', [1, 30, 60], [(0,0,0), (0,0.08,0), (0,0,0)]),
 ]
 
-# Keep the animation library attached to the armature through NLA. Do not call
-# animation_data_clear(): that removes the armature's animation container and
-# makes Blender 4.x ACTIONS export omit the generated clips.
+# Each action is stashed on its own NLA track. Blender 4.0's glTF Actions
+# exporter treats these as the portable animation library; unlike a naked
+# action with zero users, a stashed action is guaranteed to be associated with
+# the selected armature.
 arm.animation_data_create()
 for action in actions:
     track = arm.animation_data.nla_tracks.new()
@@ -171,18 +162,21 @@ for action in actions:
     strip = track.strips.new(action.name, 1, action)
     strip.action_frame_start = action.frame_range[0]
     strip.action_frame_end = action.frame_range[1]
+    strip.frame_start = action.frame_range[0]
+    strip.frame_end = action.frame_range[1]
+    strip.extrapolation = 'NOTHING'
 
 arm['desktopMateCharacter'] = 'Luna-chan'
 arm['productionAsset'] = False
 arm['assetNote'] = 'Procedural anime-style starter. Artist refinement and final licensed approval required before production release.'
 
-# Export the complete character hierarchy, real skin bindings, morph targets,
-# and all named NLA clips.
 bpy.ops.object.select_all(action='DESELECT')
 for mesh_object in parts:
     mesh_object.select_set(True)
 arm.select_set(True)
 bpy.context.view_layer.objects.active = arm
+bpy.context.scene.frame_start = 1
+bpy.context.scene.frame_end = 90
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'desktop_mate_character.blend'))
 bpy.ops.export_scene.gltf(
     filepath=os.path.join(OUT, 'avatar.glb'),
@@ -191,13 +185,12 @@ bpy.ops.export_scene.gltf(
     export_animations=True,
     export_anim_single_armature=True,
     export_reset_pose_bones=True,
-    export_animation_mode='NLA_TRACKS',
+    export_animation_mode='ACTIONS',
     export_force_sampling=True,
     export_optimize_animation_size=False,
     export_skins=True,
     export_influence_nb=4,
     export_morph=True,
     export_morph_animation=True,
-    export_nla_strips=True,
 )
 print('Desktop Mate avatar generated:', os.path.join(OUT, 'avatar.glb'))
