@@ -14,8 +14,8 @@ const hasText = (relativePath) => {
 const checks = [
   {
     name: "avatar asset present",
-    status: exists("public/assets/avatar"),
-    evidence: "public/assets/avatar/"
+    status: exists("public/assets/avatar/avatar.glb") && exists("public/assets/avatar/desktop_mate_character.blend"),
+    evidence: "public/assets/avatar/avatar.glb + desktop_mate_character.blend"
   },
   {
     name: "voice production pack supplied",
@@ -39,8 +39,8 @@ const checks = [
   },
   {
     name: "QA runbook present",
-    status: hasText("docs/qa-runbook.md"),
-    evidence: "docs/qa-runbook.md"
+    status: hasText("docs/release-qa.md"),
+    evidence: "docs/release-qa.md"
   }
 ];
 
